@@ -47,6 +47,14 @@ Our system consists of a crew of collaborating agents, orchestrated by CrewAI.
   - **Implementation**: The `crew.py` file uses `MCPServerAdapter` to connect to a remote MCP server for web fetching.
   - **Status**: ✅ **Completed**
 
+### 3.5. Memory Subsystem (Planned)
+- **Responsibility**: To provide the crew with short-term, long-term, and entity-based memory, enabling contextual conversations and cross-session learning.
+- **Implementation**: 
+  - Activated via the `memory=True` parameter in the `Crew` object.
+  - Utilizes CrewAI's built-in memory system (ChromaDB for short-term/entity, SQLite for long-term).
+  - Storage path is controlled via the `CREWAI_STORAGE_DIR` environment variable, set to `./crew_memory/` for persistence and explicit management.
+- **Status**: ⏳ **Planned**
+
 ## 4. Data Flow (Scenario: "get k8s clusters and fetch crewai.com")
 1.  **User**: Runs `./run.sh` and types the command.
 2.  **`main.py`**: Captures the input string and passes it to the `OpsCrew`.
@@ -58,13 +66,14 @@ Our system consists of a crew of collaborating agents, orchestrated by CrewAI.
 4.  **CrewAI Framework (Sequential Process)**: 
     - **Task 1**: The `k8s_expert` analyzes the input. It finds K8s-related keywords and executes the `get_cluster_info` tool. It then formulates a report.
     - **Task 2**: The `web_researcher` analyzes the same input. It finds the URL, executes the `fetch` tool via the MCP connection, and summarizes the content.
-5.  **LLM (via OpenRouter)**: The LLM drives the reasoning for both agents, deciding when to use tools and how to formulate the final, combined response based on the outputs of both tasks.
+5.  **LLM (via OpenRouter)**: The LLM drives the reasoning for both agents, deciding when to use tools and how to formulate the final, combined response based on the outputs of both tasks. **With memory enabled, the LLM can also access past conversations and learned entities to provide richer, more contextual answers.**
 6.  **`main.py`**: Displays the final, comprehensive result to the user.
 
 ## 5. Current Project Structure (Implemented)
 ```
 fast-agent/
 ├── .venv/                          # Python virtual environment
+├── crew_memory/                    # (Planned) Persistent storage for CrewAI memory
 ├── doc/                            # Documentation
 │   ├── ARCHITECTURE.md             # This file
 │   └── ...                         # Other docs
@@ -100,6 +109,7 @@ fast-agent/
 - Status unchanged, all tasks completed. The implementation was refactored and expanded upon.
 
 ## 8. Future Enhancements
-- **Guided Conversation**: Implement the advanced multi-turn conversation logic from the PRD for the `k8s_expert`.
+- **Guided Conversation**: Implement the advanced multi-turn conversation logic from the PRD for the `k8s_expert`, **leveraging the new memory capabilities for true contextual understanding.**
 - **Hierarchical Process**: Explore changing the `Process.sequential` to `Process.hierarchical` for more complex workflows.
-- **Dynamic Tool Selection**: Allow agents to choose from a larger set of tools based on the task. 
+- **Dynamic Tool Selection**: Allow agents to choose from a larger set of tools based on the task.
+- **Leverage Long-Term Memory**: Design specific tests to validate that the crew learns and improves over multiple sessions. 

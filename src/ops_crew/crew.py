@@ -73,8 +73,15 @@ class OpsCrew():
         return Crew(
             agents=[self.k8s_expert(), self.web_researcher()],
             tasks=[self.k8s_analysis_task(), self.web_fetch_task()],
-            process=Process.sequential, # Tasks will be executed sequentially
+            process=Process.sequential,
+            memory=True,
             verbose=True,
+            # Embedder will use OpenAI by default,
+            # as long as OPENAI_API_KEY is set in the environment.
+            # We are explicitly defining it here for clarity.
+            embedder={
+                "provider": "openai"
+            }
         )
 
 

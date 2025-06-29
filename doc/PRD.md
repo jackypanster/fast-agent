@@ -18,12 +18,13 @@
     - **本地工具**: 支持加载本地 Python 函数作为工具（如获取 K8s 集群信息的模拟工具）。
     - **远程 MCP 工具**: 必须能够通过 `MCPServerAdapter` 连接并加载外部 MCP 服务器提供的工具集（如网页抓取、未来要集成的 `k8s mcp server` 等）。
 3.  **LLM 集成**: 集成 Google `gemini-2.5-flash` 大语言模型。模型服务通过 `OpenRouter` (https://openrouter.ai/) 接入，配置信息通过 `.env` 文件管理。
+4.  **记忆系统**: 必须启用并配置 CrewAI 的持久化记忆功能。这为 Agent 提供了跨会话的学习能力，是实现高级交互的基础。
 
 ### 2.2. 核心交互体验：多 Agent 协作
 Ops Crew 的核心是不同领域的专家 Agent 协同工作，共同完成用户的复杂请求。
 1.  **职责分离**: 每个 Agent 都有明确的角色（如 K8s 专家、网络研究员）和专属的工具集。
 2.  **顺序流转**: 对于一个包含多个子任务的请求，Crew 会按顺序将任务分配给最合适的 Agent。例如，先由 K8s 专家分析集群，再由网络研究员抓取相关文档。
-3.  **上下文共享**: Crew 中的所有 Agent 共享初始的用户请求上下文，使得每个 Agent 都能理解完整的任务背景。
+3.  **上下文共享与记忆**: Crew 中的所有 Agent 共享同一个记忆库。这使得它们不仅能理解初始的用户请求，还能回忆起历史交互，从而做出更智能、更具上下文的决策。
 
 ### 2.3. 核心交互场景示例
 **场景**: DevOps 工程师 `Charlie` 需要快速了解当前所有 K8s 集群的概况，并同时获取 `crewAI` 官方网站的最新信息以评估其新特性。
@@ -34,11 +35,11 @@ Ops Crew 的核心是不同领域的专家 Agent 协同工作，共同完成用�
 3.  **K8s Expert Agent (任务一)**:
     - **分析**: "请求中包含'k8s clusters'，这属于我的职责范围。"
     - **行动**: 调用 `get_cluster_info` 工具。
-    - **输出**: 生成一份详细的 K8s 集群分析报告。
+    - **输出**: 生成一份详细的 K8s 集群分析报告，并将其存入记忆。
 4.  **Web Researcher Agent (任务二)**:
     - **分析**: "请求中包含 URL 'https://crewai.com'，这是我的任务。"
     - **行动**: 通过 MCP 连接调用 `fetch` 工具。
-    - **输出**: 生成一份 `crewai.com` 网站内容的摘要。
+    - **输出**: 生成一份 `crewai.com` 网站内容的摘要，并将其存入记忆。
 5.  **Ops Crew (整合)**: Crew 整合两个 Agent 的输出，形成一份完整的、包含两部分内容的最终报告。
 6.  **Charlie**: (收到一份包含 K8s 集群状态和网站摘要的综合报告)。
 
@@ -75,6 +76,7 @@ Ops Crew 的核心是不同领域的专家 Agent 协同工作，共同完成用�
 ### 4.3. 开发原则 (Development Principles)
 - **编码风格**: 遵循 CrewAI 官方最佳实践，使用 `@CrewBase` 和配置驱动的模式。
 - **核心目标**: **用最少的代码跑通多 Agent 协作的核心链路**。
+- **下一阶段目标**: **启用并验证持久化记忆能力**。
 
 ---
 
@@ -101,5 +103,6 @@ ref:
 1. https://github.com/HSn0918/kubernetes-mcp
 2. https://github.com/crewAI/crewAI
 3. https://docs.crewai.com/
-4. https://openrouter.ai/google/gemini-2.5-flash-preview-05-20
-5. https://docs.crewai.com/en/mcp/overview (MCP Integration)
+4. https://docs.crewai.com/en/concepts/memory (Memory System)
+5. https://openrouter.ai/google/gemini-2.5-flash-preview-05-20
+6. https://docs.crewai.com/en/mcp/overview (MCP Integration)

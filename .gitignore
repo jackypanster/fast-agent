@@ -119,4 +119,9 @@ dmypy.json
 .pyre/
 
 # pytype static analyzer
-.pytype/ 
+.pytype/
+
+# fast-agent project specific
+# ------------------------------------
+# Ignore the mock tools file which contains placeholder data.
+/src/tools.py 

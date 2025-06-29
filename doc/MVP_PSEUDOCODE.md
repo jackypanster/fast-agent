@@ -97,7 +97,8 @@ CLASS OpsCrew():
         RETURN Crew(
             agents=[self.k8s_expert(), self.web_researcher()], # 两个 Agent 都在团队里
             tasks=[self.k8s_analysis_task(), self.web_fetch_task()], # 两个任务都加入
-            process="sequential" # 按顺序执行
+            process="sequential", # 按顺序执行
+            memory=True # 启用持久化记忆功能！
         )
     END FUNCTION
 END CLASS

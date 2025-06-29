@@ -1,0 +1,15 @@
+k8s_query_task:
+  description: >
+    Process the user's request: "{user_input}"
+    
+    Use the available tools to gather relevant cluster information if needed.
+    Provide a comprehensive and helpful response that addresses the user's question or request.
+    
+    If the request is about cluster information, use the get_cluster_info tool to retrieve 
+    current data and provide detailed insights.
+    
+    Format your response in a clear, professional manner suitable for a DevOps engineer.
+  expected_output: >
+    A detailed, professional response that addresses the user's request 
+    with relevant cluster information, insights, and actionable recommendations where appropriate.
+  agent: k8s_expert 

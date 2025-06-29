@@ -124,4 +124,6 @@ dmypy.json
 # fast-agent project specific
 # ------------------------------------
 # Ignore the mock tools file which contains placeholder data.
-/src/tools.py 
+/src/tools.py
+# Ignore temporary test files.
+/test_embedding.py 

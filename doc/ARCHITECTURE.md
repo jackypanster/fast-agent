@@ -1,93 +1,86 @@
-# Technical Architecture: K8s Copilot
+# Technical Architecture: Ops Crew
 
 ## 1. Overview
-This document outlines the technical architecture for the K8s Copilot, translating the requirements in the [PRD](./PRD.md) into a concrete implementation plan for the MVP.
+This document outlines the technical architecture for the Ops Crew, an intelligent, multi-agent system for DevOps tasks. It translates the requirements in the [PRD](./PRD.md) into a concrete implementation plan.
 
-**📋 Current Status**: MVP implementation completed and refactored to follow CrewAI official best practices.
+**📋 Current Status**: MVP implementation completed and refactored into a multi-agent system following CrewAI official best practices.
 
 ## 2. Guiding Principles
 - **Simplicity**: Prioritize clear, straightforward code over complex abstractions.
 - **MVP First**: Focus exclusively on the functionality required to satisfy the MVP scope.
 - **CLI-centric**: All initial development will be for a command-line interface.
-- **Official Standards**: Follow CrewAI official documentation patterns and best practices.
+- **Official Standards**: Follow CrewAI official documentation patterns and best practices for creating collaborative agent crews.
+- **Separation of Concerns**: Each agent has a distinct role and a dedicated set of tools.
 
-## 3. System Components (MVP - Implemented)
-Our MVP consists of the following key components, following CrewAI's official project structure.
+## 3. System Components (Multi-Agent Implemented)
+Our system consists of a crew of collaborating agents, orchestrated by CrewAI.
 
 ### 3.1. CLI Application (`src/main.py`)
-- **Responsibility**: The main entry point of the application. It handles the user-facing loop: reading input, printing output, and managing the conversation flow.
-- **Implementation**: A simple `while` loop that takes user input via `input()` and passes it to the Crew Orchestrator.
-- **Status**: ✅ **Completed**
+- **Responsibility**: The main entry point. Handles the user-facing loop: reading input, printing output, and managing the conversation flow.
+- **Implementation**: A simple `while` loop that passes user input to the Crew Orchestrator.
+- **Status**: ✅ **Completed** (Refined with better UI prompts)
 
-### 3.2. Crew Orchestrator (`src/k8s_copilot/crew.py`)
-- **Responsibility**: The brain of the application using CrewAI's @CrewBase decorator pattern.
+### 3.2. Crew Orchestrator (`src/ops_crew/crew.py`)
+- **Responsibility**: The brain of the application, defining the crew of agents, their tools, and their collaborative tasks.
 - **Implementation**: 
-  - Uses `@CrewBase` class decorator with YAML configuration files
-  - Implements `@agent`, `@task`, and `@crew` method decorators
-  - Manages interaction with OpenRouter LLM service
-  - Orchestrates tool execution through CrewAI framework
-- **Status**: ✅ **Completed** (Refactored to official standards)
+  - Uses `@CrewBase` to define the `OpsCrew`.
+  - Defines two distinct agents: `k8s_expert` and `web_researcher`.
+  - Assigns a local tool (`get_cluster_info`) to the K8s expert.
+  - Assigns an MCP tool (`fetch`) to the web researcher via `MCPServerAdapter`.
+  - Defines sequential tasks for the agents to perform.
+- **Status**: ✅ **Completed** (Refactored to a multi-agent system)
 
-### 3.3. Configuration Files (`src/k8s_copilot/config/`)
-- **Responsibility**: YAML-based configuration for agents and tasks, following CrewAI best practices.
+### 3.3. Configuration Files (`src/ops_crew/config/`)
+- **Responsibility**: YAML-based configuration for multiple agents and their tasks.
 - **Implementation**: 
-  - `agents.yaml`: Defines K8s expert agent configuration
-  - `tasks.yaml`: Defines K8s query task configuration
-- **Status**: ✅ **Completed** (New - follows official patterns)
+  - `agents.yaml`: Defines configurations for `k8s_expert` and `web_researcher`.
+  - `tasks.yaml`: Defines task descriptions for K8s analysis and web fetching.
+- **Status**: ✅ **Completed** (Expanded for multiple agents)
 
-### 3.4. Tool Subsystem (`src/tools.py`)
-- **Responsibility**: Provides K8s cluster information tools.
-- **Implementation**: 
-  - Real K8s cluster data (9 clusters with detailed metadata)
-  - `get_cluster_info()` function with comprehensive cluster information
-  - CrewAI-compatible tool decorators
-- **Status**: ✅ **Completed** (Enhanced with real data)
+### 3.4. Tool Subsystem
+- **`src/tools.py`**:
+  - **Responsibility**: Provides local, mock tools for development.
+  - **Implementation**: Contains the `get_cluster_info()` function with real K8s cluster data.
+  - **Status**: ✅ **Completed**
+- **Remote MCP Tools**:
+  - **Responsibility**: Connect to external MCP servers to provide additional capabilities.
+  - **Implementation**: The `crew.py` file uses `MCPServerAdapter` to connect to a remote MCP server for web fetching.
+  - **Status**: ✅ **Completed**
 
-## 4. Data Flow (Implemented Scenario: "get all k8s cluster")
-1.  **User**: Runs `./run.sh` or `uv run python -m src.main` and types "get all k8s cluster".
-2.  **`main.py`**: Captures the input and passes it to the K8s Copilot Crew.
-3.  **`k8s_copilot/crew.py`**:
-    - Instantiates K8sCopilotCrew class with @CrewBase decorator
-    - Loads agent configuration from `config/agents.yaml`
-    - Loads task configuration from `config/tasks.yaml`
-    - Initializes OpenRouter LLM with environment variables
-    - Creates Agent with K8s tools and LLM configuration
-4.  **CrewAI Framework**: 
-    - Agent analyzes user request and determines tool needed
-    - Calls `get_cluster_info` tool automatically
-5.  **`tools.py`**: Returns comprehensive real cluster data (9 clusters).
-6.  **LLM (via OpenRouter)**: 
-    - Processes tool output
-    - Generates professional DevOps analysis with:
-      - Formatted cluster overview
-      - Resource utilization analysis
-      - Version distribution insights
-      - Professional recommendations
-7.  **`main.py`**: Displays the formatted result to user.
+## 4. Data Flow (Scenario: "get k8s clusters and fetch crewai.com")
+1.  **User**: Runs `./run.sh` and types the command.
+2.  **`main.py`**: Captures the input string and passes it to the `OpsCrew`.
+3.  **`ops_crew/crew.py`**:
+    - Instantiates the `OpsCrew`.
+    - Initializes the `k8s_expert` agent with the `get_cluster_info` tool.
+    - Initializes the `web_researcher` agent, connecting to the MCP server to get the `fetch` tool.
+    - Creates two tasks (`k8s_analysis_task` and `web_fetch_task`) and assigns them to their respective agents.
+4.  **CrewAI Framework (Sequential Process)**: 
+    - **Task 1**: The `k8s_expert` analyzes the input. It finds K8s-related keywords and executes the `get_cluster_info` tool. It then formulates a report.
+    - **Task 2**: The `web_researcher` analyzes the same input. It finds the URL, executes the `fetch` tool via the MCP connection, and summarizes the content.
+5.  **LLM (via OpenRouter)**: The LLM drives the reasoning for both agents, deciding when to use tools and how to formulate the final, combined response based on the outputs of both tasks.
+6.  **`main.py`**: Displays the final, comprehensive result to the user.
 
 ## 5. Current Project Structure (Implemented)
 ```
-k8s-copilot/
+fast-agent/
 ├── .venv/                          # Python virtual environment
 ├── doc/                            # Documentation
 │   ├── ARCHITECTURE.md             # This file
-│   ├── PRD.md                      # Product requirements
-│   ├── MVP_PSEUDOCODE.md           # Implementation pseudocode
-│   ├── MVP_TASKS.md                # Task breakdown
-│   └── TOOLS_SURVEY.md             # Tools research
+│   └── ...                         # Other docs
 ├── src/                            # Source code
 │   ├── __init__.py
 │   ├── main.py                     # ✅ CLI entry point
-│   ├── k8s_copilot/                # ✅ CrewAI project package
+│   ├── ops_crew/                   # ✅ CrewAI project package
 │   │   ├── __init__.py
-│   │   ├── crew.py                 # ✅ @CrewBase orchestrator
+│   │   ├── crew.py                 # ✅ Multi-agent @CrewBase orchestrator
 │   │   └── config/                 # ✅ YAML configurations
-│   │       ├── agents.yaml         # ✅ Agent definitions
-│   │       └── tasks.yaml          # ✅ Task definitions
-│   └── tools.py                    # ✅ K8s tools (real data)
+│   │       ├── agents.yaml         # ✅ Agent definitions (2 agents)
+│   │       └── tasks.yaml          # ✅ Task definitions (2 tasks)
+│   └── tools.py                    # ✅ Local K8s tools
 ├── .env                            # Environment variables
 ├── .gitignore                      # Git ignore patterns
-├── requirements.txt                # ✅ Dependencies (223 packages)
+├── requirements.txt                # ✅ Dependencies, including 'crewai-tools[mcp]'
 ├── run.sh                          # ✅ Startup script
 ├── uv.lock                         # UV lock file
 └── README.md                       # Project documentation
@@ -96,42 +89,17 @@ k8s-copilot/
 ## 6. Technical Implementation Details
 
 ### 6.1. CrewAI Integration
-- **Framework**: CrewAI with official @CrewBase pattern
-- **LLM Provider**: OpenRouter with `google/gemini-2.5-flash-preview-05-20`
-- **Configuration**: YAML-based agent and task definitions
-- **Tools**: Native CrewAI tool integration
+- **Framework**: CrewAI with official `@CrewBase` pattern.
+- **Architecture**: Multi-agent sequential process.
+- **Tools**: Supports both local Python functions and remote MCP tools via `MCPServerAdapter`.
 
-### 6.2. Environment Management
-- **Package Manager**: `uv` for fast dependency management
-- **Environment**: Python virtual environment with 223 dependencies
-- **Configuration**: Environment variables via `.env` file
-
-### 6.3. Data Source
-- **Real K8s Data**: 9 production-like clusters with:
-  - Comprehensive metadata (creation timestamps, UIDs)
-  - Resource utilization metrics (CPU, memory, pods)
-  - Component health status
-  - Version information
-  - Node counts and capacity details
+### 6.2. Environment Management & Data
+- Unchanged.
 
 ## 7. MVP Achievement Status
-
-### ✅ All 5 MVP Tasks Completed:
-1. **✅ Project Structure**: Standard CrewAI project layout
-2. **✅ Mock Tools**: Enhanced with real K8s cluster data
-3. **✅ Crew Orchestration**: @CrewBase pattern with YAML configs
-4. **✅ CLI Interface**: Professional user experience
-5. **✅ Integration Testing**: Full end-to-end functionality
-
-### ✅ Additional Improvements:
-- **Refactored to Official Standards**: Following CrewAI documentation patterns
-- **YAML Configuration**: Separated concerns with config files
-- **Enhanced Data**: Real cluster information instead of mock data
-- **Professional Output**: DevOps-grade analysis and recommendations
-- **Automation**: Startup script for easy deployment
+- Status unchanged, all tasks completed. The implementation was refactored and expanded upon.
 
 ## 8. Future Enhancements
-- **MCP Integration**: Connect to real `k8s mcp server` for live data
-- **Multi-cluster Support**: Extend to manage multiple K8s clusters
-- **Advanced Caching**: Implement intelligent caching strategies
-- **Web Interface**: Develop web-based UI for broader accessibility 
+- **Guided Conversation**: Implement the advanced multi-turn conversation logic from the PRD for the `k8s_expert`.
+- **Hierarchical Process**: Explore changing the `Process.sequential` to `Process.hierarchical` for more complex workflows.
+- **Dynamic Tool Selection**: Allow agents to choose from a larger set of tools based on the task. 

@@ -10,7 +10,7 @@ echo "--- Syncing Python dependencies using uv... ---"
 uv pip sync requirements.txt
 
 echo
-echo "--- Starting K8s Copilot... ---"
+echo "--- Starting the Ops Crew... ---"
 echo
 
 # Execute the main python script using uv run.
@@ -19,4 +19,4 @@ echo
 uv run python -m src.main "$@"
 
 echo
-echo "--- K8s Copilot session ended. ---" 
+echo "--- Ops Crew session ended. ---" 

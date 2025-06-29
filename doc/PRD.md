@@ -1,96 +1,80 @@
-# K8s 智能运维助手 (K8s Copilot) 产品需求文档 (PRD)
+# 智能运维助手 (Ops Crew) 产品需求文档 (PRD)
 
 ## 1. 愿景与目标
 
 ### 1.1. 愿景
-构建一个企业级的、交互式的 Kubernetes 智能运维助手（K8s Copilot）。
+构建一个企业级的、由多个专家 Agent 协作的智能运维助手（Ops Crew）。
 
 ### 1.2. 核心目标
-赋能团队所有成员（包括开发者、测试、运维），使其能通过自然语言与 Kubernetes 集群进行高效、安全的交互，从而极大地降低 K8s 的使用门槛，提升日常管理和问题排查的效率。
+赋能团队所有成员（包括开发者、测试、运维），使其能通过自然语言与复杂的运维任务进行高效、安全的交互。Ops Crew 将集成多种工具，处理包括但不限于 Kubernetes 管理、网络信息获取、系统监控等多方面的工作，旨在将繁琐的运维操作自动化、智能化。
 
 ---
 
 ## 2. 核心功能需求
 
 ### 2.1. 系统集成
-1.  **Agent 框架**: 基于 `crewAI` (https://www.crewai.com/) Python 框架进行开发。
-2.  **K8s 工具集**: 动态连接并加载由内部 `k8s mcp server` (http://localhost:8001/sse) 提供的全套（约 47 个）K8s 管理工具。Agent 必须能够理解并使用这些动态加载的工具。
-3.  **LLM 集成**: 集成 Google `gemini-2.5-flash` 大语言模型。模型服务通过 `OpenRouter` (https://openrouter.ai/) 接入，相关的 API Key 等配置信息需通过本地 `.env` 文件进行管理，确保安全与灵活性。
+1.  **Agent 框架**: 基于 `crewAI` (https://www.crewai.com/) Python 框架进行开发，并遵循其多 Agent 协作的最佳实践。
+2.  **工具集**:
+    - **本地工具**: 支持加载本地 Python 函数作为工具（如获取 K8s 集群信息的模拟工具）。
+    - **远程 MCP 工具**: 必须能够通过 `MCPServerAdapter` 连接并加载外部 MCP 服务器提供的工具集（如网页抓取、未来要集成的 `k8s mcp server` 等）。
+3.  **LLM 集成**: 集成 Google `gemini-2.5-flash` 大语言模型。模型服务通过 `OpenRouter` (https://openrouter.ai/) 接入，配置信息通过 `.env` 文件管理。
 
-### 2.2. 核心交互体验：引导式对话（Guided Conversation）
-Copilot 必须能够智能地引导用户，特别是对 K8s 不熟悉的成员，完成操作。这是产品的核心价值所在。
-1.  **多轮对话与参数补全**: 当用户指令缺少必要参数时（如 `pod_name`, `namespace`），Copilot 必须通过反问来澄清，引导用户补全信息，而不是直接报错。
-2.  **主动推荐与选项列表**: 当用户不清楚参数值时，Copilot 应主动调用其他工具（如 `list_namespaces`）查询可能的选项，并以列表形式呈现给用户，将"填空题"变为"选择题"。
-3.  **上下文感知**: Copilot 需具备上下文记忆能力。在连续对话中，能够复用之前提到的实体（如 `namespace`），避免重复提问。
-4.  **复杂意图分解**: 对于模糊的、高层次的运维指令（如"检查服务健康状况"），Copilot 应能将其分解为一系列具体的、可执行的工具调用步骤，并向用户确认后执行。
+### 2.2. 核心交互体验：多 Agent 协作
+Ops Crew 的核心是不同领域的专家 Agent 协同工作，共同完成用户的复杂请求。
+1.  **职责分离**: 每个 Agent 都有明确的角色（如 K8s 专家、网络研究员）和专属的工具集。
+2.  **顺序流转**: 对于一个包含多个子任务的请求，Crew 会按顺序将任务分配给最合适的 Agent。例如，先由 K8s 专家分析集群，再由网络研究员抓取相关文档。
+3.  **上下文共享**: Crew 中的所有 Agent 共享初始的用户请求上下文，使得每个 Agent 都能理解完整的任务背景。
 
 ### 2.3. 核心交互场景示例
-**场景**: 新手开发者 `Alex` 需要查看他刚刚部署的应用 `cart-service` 的日志，但他不确定完整的 Pod 名称和所在的命名空间。
+**场景**: DevOps 工程师 `Charlie` 需要快速了解当前所有 K8s 集群的概况，并同时获取 `crewAI` 官方网站的最新信息以评估其新特性。
 
 **交互流程**:
-1.  **Alex**: "hi，帮我看一下 `cart-service` 的日志"
-2.  **Copilot**: "好的。为了找到正确的日志，我需要知道它在哪个 **命名空间（Namespace）** 里。您知道吗？如果您不确定，我可以列出所有的命名空间供您选择。"
-3.  **Alex**: "我不确定，你列出来吧"
-4.  **Copilot**: (调用 `list_namespaces`) "好的，当前集群有以下命名空间：`[default, dev, production]`。您觉得 `cart-service` 可能在哪个里面？"
-5.  **Alex**: "应该在 `dev`"
-6.  **Copilot**: (调用 `list_pods(namespace='dev')`) "收到。在 `dev` 命名空间下，我找到了几个包含 `cart-service` 的 Pod：`[cart-service-v1-abcdef, cart-service-v2-ghijk]`。您想看哪个的日志？"
-7.  **Alex**: "v2 那个"
-8.  **Copilot**: (调用 `get_pod_logs(namespace='dev', pod_name='cart-service-v2-ghijk')`) "好的，正在拉取 `cart-service-v2-ghijk` 的日志..." (展示日志)
+1.  **Charlie**: "show me all k8s clusters and also fetch the main content from https://crewai.com"
+2.  **Ops Crew (启动)**: Crew 接收到指令，开始顺序执行任务流。
+3.  **K8s Expert Agent (任务一)**:
+    - **分析**: "请求中包含'k8s clusters'，这属于我的职责范围。"
+    - **行动**: 调用 `get_cluster_info` 工具。
+    - **输出**: 生成一份详细的 K8s 集群分析报告。
+4.  **Web Researcher Agent (任务二)**:
+    - **分析**: "请求中包含 URL 'https://crewai.com'，这是我的任务。"
+    - **行动**: 通过 MCP 连接调用 `fetch` 工具。
+    - **输出**: 生成一份 `crewai.com` 网站内容的摘要。
+5.  **Ops Crew (整合)**: Crew 整合两个 Agent 的输出，形成一份完整的、包含两部分内容的最终报告。
+6.  **Charlie**: (收到一份包含 K8s 集群状态和网站摘要的综合报告)。
 
-### 2.4. 主动式引导与教学（Proactive Guidance & Tutoring）
-为了降低学习曲线并固化最佳实践，Copilot 需要具备主动引导和教学的能力。
+### 2.4. (规划中) 主动式引导与教学
+*此部分功能继承自原 K8s Copilot 设想，是下一步针对单个 Agent 进行能力增强的方向。*
+1.  **快捷指令**
+2.  **引导式探索**
+3.  **运维最佳实践教学**
 
-1.  **快捷指令（Quick Commands）**:
-    -   为了方便用户快速上手，Copilot 应提供一组无需参数的"快捷指令"。
-    -   这些指令可以在对话开始时或用户请求帮助时主动推送。
-    -   **示例**: `[列出所有集群]`, `[查看集群资源总览]`, `[显示所有命名空间]`。用户可以直接点击或输入来执行。
-
-2.  **引导式探索（Guided Exploration）**:
-    -   Copilot 不应被动地等待命令，而应在每次操作后，根据上下文智能推荐下一步可能的操作。
-    -   **示例**: 当用户列出所有 Pod 后，Copilot 可以追问："接下来，您可能想 `[查看某个Pod的日志]`，`[获取Pod的详细描述]` 或者 `[检查Pod的事件]`。您想做什么？"
-
-3.  **运维最佳实践教学（Teaching Best Practices）**:
-    -   Copilot 应化身为 K8s 导师，在交互中教授用户最佳实践。
-    -   **示例**: 如果用户在排查问题，Copilot 可以建议："在查看日志之前，检查一下 Pod 的 `Events` 通常能更快地发现部署、调度或健康检查相关的问题。需要我帮您查一下吗？"
-
-### 2.5. 性能与效率：缓存策略 (Performance & Efficiency: Caching)
-为了提升响应速度、降低系统负载并优化成本，Copilot 必须实现一套智能缓存机制。
-
-1.  **缓存目标**:
-    -   **高频只读操作**: 优先缓存高频的、重复性强的查询操作结果，特别是各类 `list` 操作（如 `list_clusters`, `list_namespaces`）。
-    -   **半静态数据**: 对于不经常变动的数据（如集群名称、节点信息），应采用较长的缓存时间。
-
-2.  **缓存实现**:
-    -   **缓存存储**: 初期可使用简单的**内存缓存**实现。
-    -   **缓存周期 (TTL)**: 缓存必须带有过期时间（Time-To-Live）。不同数据的 TTL 应不同（例如：集群列表1小时，命名空间列表5分钟）。
-    -   **智能失效与刷新**:
-        -   Copilot 应默认优先使用缓存数据进行响应。
-        -   当后续操作基于缓存数据执行失败时（例如：在一个已不存在的缓存命名空间中查找 Pod），Copilot 必须能智能地识别出数据已失效。
-        -   识别失效后，应自动清除相关缓存，重新调用工具获取最新数据，并完成用户请求。
-    -   **手动刷新**: 提供一个明确的指令（如 `[刷新缓存]` 或 `[重新扫描]`），允许用户在需要时强制清除所有缓存，获取最新状态。
+### 2.5. (规划中) 性能与效率：缓存策略
+*此部分为未来优化项。*
+1.  **缓存目标**
+2.  **缓存实现**
 
 ---
 
 ## 4. MVP 实施计划与技术选型
 
 ### 4.1. 技术栈 (Technology Stack)
-- **Python 环境与包管理**: `uv` ([https://github.com/astral-sh/uv](https://github.com/astral-sh/uv))。利用其高效的特性管理项目虚拟环境和依赖。
-- **Agent 框架**: `crewAI`。
-- **LLM Provider**: `OpenRouter` (模型: `google/gemini-2.5-flash-preview-05-20`)。
+- **Python 环境与包管理**: `uv`
+- **Agent 框架**: `crewAI`
+- **LLM Provider**: `OpenRouter` (模型: `google/gemini-2.5-flash-preview-05-20`)
 
-### 4.2. MVP 范围 (MVP Scope)
-- **交付形态**: 命令行界面 (CLI) 应用。暂不考虑图形化界面。
-- **核心用户故事**: 完整实现对用户指令 **"帮我查看一下k8s状态"** 的响应。
+### 4.2. MVP 范围 (已完成并扩展)
+- **交付形态**: 命令行界面 (CLI) 应用。
+- **核心用户故事**: 完整实现对包含 K8s 分析和网络抓取两种任务的混合指令的响应。
 - **成功标准**:
-    1. 用户在 CLI 中输入指令。
-    2. 程序能够调用 LLM 理解用户意图。
-    3. LLM 规划出需要调用 `list_clusters` (或类似) 工具。
-    4. 程序执行工具，成功从 `k8s mcp server` 获取到集群列表。
-    5. 程序将查询到的集群列表信息，以人类可读的格式打印在 CLI 中。
+    1. 用户在 CLI 中输入混合指令。
+    2. Ops Crew 成功启动，并将任务正确分配给两个 Agent。
+    3. `k8s_expert` Agent 成功调用本地 `get_cluster_info` 工具。
+    4. `web_researcher` Agent 成功调用远程 MCP `fetch` 工具。
+    5. 程序将两个 Agent 的结果整合后，以清晰的格式打印在 CLI 中。
 
 ### 4.3. 开发原则 (Development Principles)
-- **编码风格**: 采用简洁、平铺直叙的函数式风格，避免复杂的类和抽象。
-- **核心目标**: **用最少的代码跑通 MVP**。优先保证核心链路能够工作，此阶段不追求代码的健壮性、性能优化和完备的错误处理。
+- **编码风格**: 遵循 CrewAI 官方最佳实践，使用 `@CrewBase` 和配置驱动的模式。
+- **核心目标**: **用最少的代码跑通多 Agent 协作的核心链路**。
 
 ---
 
@@ -118,3 +102,4 @@ ref:
 2. https://github.com/crewAI/crewAI
 3. https://docs.crewai.com/
 4. https://openrouter.ai/google/gemini-2.5-flash-preview-05-20
+5. https://docs.crewai.com/en/mcp/overview (MCP Integration)

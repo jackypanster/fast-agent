@@ -1,0 +1,38 @@
+k8s_query_task:
+  description: >
+    Process the user's request: "{user_input}"
+    
+    Use the available tools to gather relevant cluster information if needed.
+    Provide a comprehensive and helpful response that addresses the user's question or request.
+    
+    If the request is about cluster information, use the get_cluster_info tool to retrieve 
+    current data and provide detailed insights.
+    
+    Format your response in a clear, professional manner suitable for a DevOps engineer.
+  expected_output: >
+    A detailed, professional response that addresses the user's request 
+    with relevant cluster information, insights, and actionable recommendations where appropriate.
+  agent: k8s_expert 
+
+k8s_analysis_task:
+  description: >
+    Analyze the user's request: '{user_input}' to identify any questions related to Kubernetes clusters.
+    If K8s questions are present, use your available tools to find information about the company's
+    Kubernetes clusters and provide a comprehensive summary and analysis.
+    Focus on cluster status, version, resource utilization, and overall health.
+    If there are no K8s-related questions, simply state that you are ready to help with K8s tasks.
+  expected_output: >
+    A detailed report of the Kubernetes cluster analysis, including a summary table, version distribution,
+    resource insights, component health, and professional recommendations. If no K8s analysis was requested,
+    a simple confirmation that you are the K8s expert on standby.
+
+web_fetch_task:
+  description: >
+    Analyze the user's request: '{user_input}' to identify any URLs that need to be researched.
+    If URLs are present, use your web fetching tool to retrieve the content from each URL.
+    Extract the most relevant information and provide a concise summary.
+    If no URLs are mentioned, state that you are ready to perform web research.
+  expected_output: >
+    A summary of the content fetched from the provided URLs. If multiple URLs are processed,
+    provide a separate summary for each. If no web fetching was requested, a simple confirmation
+    that you are the web researcher on standby. 

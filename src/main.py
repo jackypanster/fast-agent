@@ -1,20 +1,22 @@
+"""
+Main entry point for the K8s Copilot application.
+"""
 import os
 import sys
 from dotenv import load_dotenv
 
-# Import the crew runner
-from src.k8s_copilot.crew import run_crew
+from src.ops_crew.crew import run_crew
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
 def main():
     """
-    Main function to run the K8s Copilot CLI interface.
+    Main function to run the CLI interface.
     """
-    print("🚀 Welcome to K8s Copilot!")
+    print("🚀 Welcome to the Ops Crew!")
     print("Type 'exit' or 'quit' to end the session.")
-    print("=" * 50)
+    print("==================================================")
     
     # Check if API key is configured
     if not os.getenv("OPENROUTER_API_KEY"):
@@ -25,7 +27,7 @@ def main():
     while True:
         try:
             # Get user input
-            user_input = input("\n🤖 K8s Copilot > ").strip()
+            user_input = input("🤖 Ops Crew > ").strip()
             
             # Check for exit commands
             if user_input.lower() in ['exit', 'quit', 'q']:

@@ -12,15 +12,13 @@ This document outlines the technical architecture for the K8s Copilot, translati
 ## 3. System Components (MVP)
 Our MVP will consist of the following key components, designed to be simple and "flat" as per our development principles.
 
-![Architecture Diagram](https://i.imgur.com/vHqjZyT.png)
-
 ### 3.1. CLI Application (`src/main.py`)
 - **Responsibility**: The main entry point of the application. It handles the user-facing loop: reading input, printing output, and managing the conversation flow.
 - **Implementation**: A simple `while` loop that takes user input via `input()` and passes it to the Agent Orchestrator.
 
 ### 3.2. Agent Orchestrator (`src/agent.py`)
 - **Responsibility**: The brain of the application. It orchestrates the entire process from receiving user input to returning a final answer.
-- **Implementation**: This module will initialize the `fast-agent` instance, load it with tools, manage the interaction with the LLM Service, and execute the tool-calling logic.
+- **Implementation**: This module will initialize the `crewAI` components (Agents, Tasks, and a Crew), load them with tools, manage the interaction with the LLM Service, and execute the tool-calling logic.
 
 ### 3.3. LLM Service (`src/llm_service.py`)
 - **Responsibility**: A dedicated interface for all communications with the Large Language Model.
@@ -58,7 +56,7 @@ Our MVP will consist of the following key components, designed to be simple and 
 
 ## 5. Proposed Project Structure
 ```
-fast-agent/
+k8s-copilot/
 ├── .venv/
 ├── doc/
 │   ├── ARCHITECTURE.md

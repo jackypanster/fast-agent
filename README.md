@@ -1,6 +1,6 @@
 # K8s Copilot
 
-An interactive AI assistant to manage Kubernetes with natural language, powered by `fast-agent` and modern LLMs.
+An interactive AI assistant to manage Kubernetes with natural language, powered by `crewAI` and modern LLMs.
 
 This project aims to create a "K8s Copilot" that allows developers, testers, and operations engineers to interact with Kubernetes clusters using simple, conversational language. It dramatically lowers the barrier to entry for K8s and improves day-to-day operational efficiency.
 

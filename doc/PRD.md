@@ -13,7 +13,7 @@
 ## 2. 核心功能需求
 
 ### 2.1. 系统集成
-1.  **Agent 框架**: 基于 `fast-agent` (https://fast-agent.ai/) Python 框架进行开发。
+1.  **Agent 框架**: 基于 `crewAI` (https://www.crewai.com/) Python 框架进行开发。
 2.  **K8s 工具集**: 动态连接并加载由内部 `k8s mcp server` (http://localhost:8001/sse) 提供的全套（约 47 个）K8s 管理工具。Agent 必须能够理解并使用这些动态加载的工具。
 3.  **LLM 集成**: 集成 Google `gemini-2.5-flash` 大语言模型。模型服务通过 `OpenRouter` (https://openrouter.ai/) 接入，相关的 API Key 等配置信息需通过本地 `.env` 文件进行管理，确保安全与灵活性。
 
@@ -75,7 +75,7 @@ Copilot 必须能够智能地引导用户，特别是对 K8s 不熟悉的成员�
 
 ### 4.1. 技术栈 (Technology Stack)
 - **Python 环境与包管理**: `uv` ([https://github.com/astral-sh/uv](https://github.com/astral-sh/uv))。利用其高效的特性管理项目虚拟环境和依赖。
-- **Agent 框架**: `fast-agent`。
+- **Agent 框架**: `crewAI`。
 - **LLM Provider**: `OpenRouter` (模型: `google/gemini-2.5-flash-preview-05-20`)。
 
 ### 4.2. MVP 范围 (MVP Scope)
@@ -115,6 +115,6 @@ Copilot 必须能够智能地引导用户，特别是对 K8s 不熟悉的成员�
 ref:
 
 1. https://github.com/HSn0918/kubernetes-mcp
-2. https://github.com/evalstate/fast-agent
-3. https://fast-agent.ai/
+2. https://github.com/crewAI/crewAI
+3. https://docs.crewai.com/
 4. https://openrouter.ai/google/gemini-2.5-flash-preview-05-20

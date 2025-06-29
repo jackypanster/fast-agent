@@ -3,7 +3,7 @@
 ## 1. 目的
 本文档为初级开发者提供一份高度简化的伪代码，用于描述 MVP 的核心逻辑。它旨在帮助开发者在不关心具体库实现的情况下，快速理解"从用户输入到系统输出"的全过程。
 
-本文档是 [技术架构文档](./ARCHITECTURE.md) 的具体实现蓝图。
+本文档是 [技术架构文档](./ARCHITECTURE.md) 的具体实现蓝图，并已根据 `crewAI` 框架进行更新。
 
 ## 2. 文件伪代码
 
@@ -14,10 +14,11 @@
 # 我们只需要定义一个简单的函数，它不需要任何参数，
 # 并且返回一个固定的、代表集群信息的 Python 字典。
 # 这个函数模拟了我们从 `kubernetes-mcp` 调研出的 GET_CLUSTER_INFO 工具。
+# 在 crewAI 中，这个函数可以直接作为工具使用。
 
 FUNCTION GET_CLUSTER_INFO():
     # 打印一条消息，这样我们运行时就能清楚地看到这个函数被调用了。
-    PRINT "--- MOCK TOOL: GET_CLUSTER_INFO() CALLED ---"
+    PRINT "--- TOOL CALLED: GET_CLUSTER_INFO() ---"
 
     # 返回一个写死的数据结构。
     RETURN {
@@ -28,84 +29,74 @@ FUNCTION GET_CLUSTER_INFO():
 END FUNCTION
 ```
 
-### 2.2. `src/llm_service.py`
+### 2.2. `src/crew.py` (原 `agent.py` 和 `llm_service.py`)
 ```python
-# 伪代码: llm_service.py
-# 这个文件负责与大模型服务（OpenRouter）的所有交互。
+# 伪代码: crew.py
+# 这是我们系统的核心，负责定义和编排 Agent、Task 和 Crew。
 
-# 需要引入 fast-agent 的 ChatPrompt 模板和 OpenRouter 的客户端
-IMPORT ChatPrompt from fast_agent.prompt
-IMPORT OpenRouter from openrouter
+# 引入我们自己写的 tools
+IMPORT GET_CLUSTER_INFO from tools
 
-# 定义一个函数，它接收用户的输入和可用的工具列表
-FUNCTION get_llm_response(user_input, tools):
-    # 1. 从环境变量中读取 API Key (这部分需要一个 .env 文件)
+# 引入 crewAI 的核心组件
+IMPORT Agent, Task, Crew from "crewai"
+# 引入用于连接 OpenRouter 的 LLM 客户端
+IMPORT ChatOpenRouter from "langchain_community.chat_models.openrouter"
+
+
+# 定义一个主函数，它接收用户的原始输入
+FUNCTION run_crew(user_input):
+    # 1. 从环境变量中读取 API Key
     api_key = GET_ENVIRONMENT_VARIABLE("OPENROUTER_API_KEY")
 
-    # 2. 初始化 OpenRouter 客户端
-    client = OpenRouter(api_key=api_key)
-
-    # 3. 创建一个 fast-agent 的 prompt 实例
-    prompt = ChatPrompt()
-
-    # 4. 调用 prompt 的 `build` 方法，传入用户输入和工具
-    #    这会生成一个符合 LLM API 要求的、结构化的消息列表
-    messages = prompt.build(user_input, tools=tools)
-
-    # 5. 调用 OpenRouter 客户端，发送消息，并指定使用哪个模型
-    response = client.chat.completions.create(
+    # 2. 初始化 LLM 客户端
+    #    我们告诉它使用哪个模型，并传入 API Key。
+    llm = ChatOpenRouter(
         model="google/gemini-2.5-flash-preview-05-20",
-        messages=messages,
+        api_key=api_key
     )
 
-    # 6. 返回从 LLM 得到的完整响应对象
-    RETURN response
-END FUNCTION
-```
+    # 3. 定义我们的 K8s 运维专家 Agent
+    k8s_expert = Agent(
+        role="Senior Kubernetes Administrator",
+        goal="Answer user questions about the Kubernetes cluster status.",
+        backstory="You are a seasoned K8s expert with years of experience managing complex clusters. You use your available tools to provide clear and concise answers.",
+        tools=[GET_CLUSTER_INFO], # 把我们的工具赋给 Agent
+        llm=llm, # 把 LLM 赋给 Agent
+        allow_delegation=False # MVP 阶段，我们不需要 Agent 之间的协作
+    )
 
-### 2.3. `src/agent.py`
-```python
-# 伪代码: agent.py
-# 这是我们系统的核心，负责编排一切。
+    # 4. 为 Agent 创建一个任务
+    #    任务描述会结合用户的输入。
+    query_task = Task(
+        description=f"The user wants to know about the cluster. Here is their exact question: '{user_input}'. Use your tools to find the answer and report back.",
+        agent=k8s_expert, # 把任务分配给我们的专家
+        expected_output="A concise, human-readable sentence summarizing the cluster status based on the tool's output."
+    )
 
-# 引入我们自己写的 llm_service 和 tools
-IMPORT GET_CLUSTER_INFO from tools
-IMPORT get_llm_response from llm_service
+    # 5. 组建一个 Crew (团队)
+    #    团队里包含我们的 Agent 和要执行的任务。
+    k8s_status_crew = Crew(
+        agents=[k8s_expert],
+        tasks=[query_task],
+        verbose=2 # 设置为 2 可以打印出详细的思考和执行过程
+    )
 
-# 引入 fast-agent 的 Agent 类
-IMPORT Agent from fast_agent
+    # 6. 启动 Crew！
+    #    `kickoff` 方法会运行整个流程，直到任务完成。
+    final_response = k8s_status_crew.kickoff()
 
-# 定义一个主函数，接收用户的原始输入
-FUNCTION run_agent(user_input):
-    # 1. 初始化 Agent
-    #    我们把模拟工具 GET_CLUSTER_INFO 作为一个列表传给它。
-    agent = Agent(tools=[GET_CLUSTER_INFO])
-
-    # 2. 调用 Agent 的 `run` 方法
-    #    这个方法是整个流程的入口。它需要一个回调函数来实际调用 LLM。
-    #    我们把 `get_llm_response` 函数作为回调传给它。
-    final_response = agent.run(user_input, llm_callback=get_llm_response)
-
-    # 3. Agent 的 `run` 方法会自动处理所有事情：
-    #    - 调用 get_llm_response，第一次询问 LLM 该怎么做。
-    #    - LLM 返回说要调用 GET_CLUSTER_INFO 工具。
-    #    - Agent 解析 LLM 的回答，并自动执行 GET_CLUSTER_INFO() 函数。
-    #    - Agent 拿到工具的返回结果。
-    #    - Agent 再次调用 get_llm_response，把工具结果给 LLM，让它生成最终回复。
-    #    - Agent 返回最终的人类可读的回复。
-
-    # 4. 返回这个最终回复
+    # 7. 返回最终的回复
     RETURN final_response
 END FUNCTION
 ```
 
-### 2.4. `src/main.py`
+### 2.3. `src/main.py`
 ```python
 # 伪代码: main.py
 # 这是用户直接运行的程序入口。
 
-# 引入我们写的 agent
-IMPORT run_agent from agent
+# 引入我们写的 crew
+IMPORT run_crew from crew
 
 # 定义主执行函数
 FUNCTION main():
@@ -121,8 +112,8 @@ FUNCTION main():
         IF user_input == "exit":
             BREAK
 
-        # 3. 调用我们的 Agent Orchestrator，并传入用户输入
-        agent_response = run_agent(user_input)
+        # 3. 调用我们的 Crew Orchestrator，并传入用户输入
+        agent_response = run_crew(user_input)
 
         # 4. 将 Agent 返回的结果打印到控制台
         PRINT "Copilot: ", agent_response

@@ -1,38 +1,55 @@
-k8s_query_task:
+# This file defines the tasks for our Ops Crew.
+# Each task has a description of what it should do and the expected output.
+
+tool_discovery_task:
   description: >
-    Process the user's request: "{user_input}"
-    
-    Use the available tools to gather relevant cluster information if needed.
-    Provide a comprehensive and helpful response that addresses the user's question or request.
-    
-    If the request is about cluster information, use the get_cluster_info tool to retrieve 
-    current data and provide detailed insights.
-    
-    Format your response in a clear, professional manner suitable for a DevOps engineer.
+    **Context:**
+    You are responsible for creating and maintaining a tools cache file `tools_cache.json`.
+    Since you have access to all available MCP tools, you need to catalog them for future use.
+
+    **Your Task:**
+    1. Check if `tools_cache.json` exists in the project root directory.
+    2. If it exists, read the `fetched_at` timestamp and check if it's less than 24 hours old.
+    3. If the cache is valid (< 24h), output "Cache is up-to-date, skipping tool discovery."
+    4. If the cache is missing or expired, create a comprehensive tools inventory.
+    5. Create a JSON structure with:
+       - `fetched_at`: current timestamp in ISO format (use datetime.now().isoformat())
+       - `tools`: array with all available tools, each containing:
+         * `name`: tool name
+         * `description`: brief description of what the tool does
+         * `parameters`: basic parameter information (can be simplified)
+    6. Save this JSON to `tools_cache.json` in the project root.
+    7. Output a summary of how many tools were cached.
+
+    **Important Notes:**
+    - You should include all K8s-related tools like LIST_CLUSTERS, GET_CLUSTER_INFO, DESCRIBE_*, GET_*, etc.
+    - The cache helps optimize system performance by avoiding repeated tool discovery.
+    - Make the descriptions helpful for other agents to understand what each tool does.
+
   expected_output: >
-    A detailed, professional response that addresses the user's request 
-    with relevant cluster information, insights, and actionable recommendations where appropriate.
-  agent: k8s_expert 
+    A brief status message indicating either "Cache is up-to-date" or "Successfully cached X tools to tools_cache.json".
+    The tools_cache.json file should be created/updated with the current tool inventory.
 
 k8s_analysis_task:
   description: >
-    Analyze the user's request: '{user_input}' to identify any questions related to Kubernetes clusters.
-    If K8s questions are present, use your available tools to find information about the company's
-    Kubernetes clusters and provide a comprehensive summary and analysis.
-    Focus on cluster status, version, resource utilization, and overall health.
-    If there are no K8s-related questions, simply state that you are ready to help with K8s tasks.
-  expected_output: >
-    A detailed report of the Kubernetes cluster analysis, including a summary table, version distribution,
-    resource insights, component health, and professional recommendations. If no K8s analysis was requested,
-    a simple confirmation that you are the K8s expert on standby.
+    **Context:**
+    You have two tools:
+      • `list_clusters` – returns **all** Kubernetes clusters (no parameters required).
+      • `GET_CLUSTER_INFO` – returns detailed info for **one** cluster (requires `cluster` name).
+    When the user asks for an overall cluster list/overview, you must first call `list_clusters`.
 
-web_fetch_task:
-  description: >
-    Analyze the user's request: '{user_input}' to identify any URLs that need to be researched.
-    If URLs are present, use your web fetching tool to retrieve the content from each URL.
-    Extract the most relevant information and provide a concise summary.
-    If no URLs are mentioned, state that you are ready to perform web research.
+    **Your Task:**
+    1.  Analyze the user's request: '{user_input}'.
+    2.  Call `list_clusters` to fetch the list of clusters.
+    3.  For each cluster in the result, extract `metadata.name`, `status.phase`, `spec.version`, `spec.description`, `spec.endpoint`.
+    4.  The table should include the following columns for each cluster:
+        - Cluster Name (from `metadata.name`)
+        - Status (from `status.phase`)
+        - Kubernetes Version (from `spec.version`)
+        - Description (from `spec.description`)
+        - Endpoint (from `spec.endpoint`)
+
   expected_output: >
-    A summary of the content fetched from the provided URLs. If multiple URLs are processed,
-    provide a separate summary for each. If no web fetching was requested, a simple confirmation
-    that you are the web researcher on standby. 
+    A markdown-formatted report containing a summary table of all Kubernetes clusters.
+    The table must include columns for Cluster Name, Status, Version, Description, and Endpoint.
+    If the tool returns no clusters, state that no clusters were found. 

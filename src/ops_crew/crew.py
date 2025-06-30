@@ -1,4 +1,7 @@
 import os
+import json
+import pathlib
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
@@ -15,10 +18,10 @@ class OpsCrew():
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
     
-    # MCP Server configuration for the web researcher
+    # MCP Server configuration
     mcp_server_params = [
         {
-            "url": "https://mcp.api-inference.modelscope.net/da81fcffd39044/sse",
+            "url": os.getenv("K8S_MCP_URL"),
             "transport": "sse"
         }
     ]
@@ -32,22 +35,54 @@ class OpsCrew():
             temperature=0.1
         )
 
+    def _load_cached_tools(self):
+        """Load tools from cache and return filtered tool names for k8s operations"""
+        cache_path = pathlib.Path("tools_cache.json")
+        if not cache_path.exists():
+            # Fallback: load all tools if no cache exists
+            return self.get_mcp_tools()
+        
+        try:
+            cache_data = json.loads(cache_path.read_text())
+            # Filter tools for k8s operations (list_, get_, describe_ prefixes)
+            k8s_tool_names = [
+                tool["name"] for tool in cache_data.get("tools", [])
+                if tool["name"].lower().startswith(("list_", "get_", "describe_"))
+            ]
+            if k8s_tool_names:
+                return self.get_mcp_tools(*k8s_tool_names)
+            else:
+                # Fallback if no matching tools found
+                return self.get_mcp_tools()
+        except (json.JSONDecodeError, KeyError):
+            # Fallback on cache corruption
+            return self.get_mcp_tools()
+
+    @agent
+    def tool_inspector(self) -> Agent:
+        return Agent(
+            config=self.agents_config['tool_inspector'],
+            # Give it access to all tools so it can catalog them
+            tools=self.get_mcp_tools(),
+            llm=self.llm,
+            verbose=False
+        )
+
     @agent
     def k8s_expert(self) -> Agent:
         return Agent(
             config=self.agents_config['k8s_expert'],
-            tools=[get_cluster_info], # Only K8s tools
+            # Use cached tools with intelligent filtering
+            tools=self._load_cached_tools(),
             llm=self.llm,
             verbose=True
         )
-        
-    @agent
-    def web_researcher(self) -> Agent:
-        return Agent(
-            config=self.agents_config['web_researcher'],
-            #tools=self.get_mcp_tools(), # Only MCP tools
-            llm=self.llm,
-            verbose=True
+
+    @task
+    def tool_discovery_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['tool_discovery_task'],
+            agent=self.tool_inspector()
         )
 
     @task
@@ -57,34 +92,45 @@ class OpsCrew():
             agent=self.k8s_expert()
         )
 
-    @task
-    def web_fetch_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['web_fetch_task'],
-            agent=self.web_researcher()
+    @crew
+    def discovery_crew(self) -> Crew:
+        """Creates a crew for tool discovery only"""
+        return Crew(
+            agents=[self.tool_inspector()],
+            tasks=[self.tool_discovery_task()],
+            process=Process.sequential,
+            verbose=False
         )
 
     @crew
-    def crew(self) -> Crew:
-        """Creates the Ops crew"""
+    def ops_crew(self) -> Crew:
+        """Creates the main Ops crew for user tasks"""
         return Crew(
-            agents=[self.k8s_expert(), self.web_researcher()],
-            tasks=[self.k8s_analysis_task(), self.web_fetch_task()],
+            agents=[self.k8s_expert()],
+            tasks=[self.k8s_analysis_task()],
             process=Process.sequential,
-            memory=True,
-            verbose=True,
-            # Embedder will use OpenAI by default,
-            # as long as OPENAI_API_KEY is set in the environment.
-            # We are explicitly defining it here for clarity.
-            embedder={
-                "provider": "openai"
-            }
+            verbose=True
         )
+
+
+def _should_refresh_cache() -> bool:
+    """Check if tools cache needs to be refreshed (older than 24h or missing)"""
+    cache_path = pathlib.Path("tools_cache.json")
+    if not cache_path.exists():
+        return True
+    
+    try:
+        cache_data = json.loads(cache_path.read_text())
+        fetched_at = datetime.fromisoformat(cache_data.get("fetched_at", ""))
+        return datetime.now() - fetched_at > timedelta(hours=24)
+    except (json.JSONDecodeError, KeyError, ValueError):
+        return True
 
 
 def run_crew(user_input: str) -> str:
     """
     Sets up and runs the Ops crew to process a user's request.
+    Automatically runs tool discovery if cache is stale.
 
     Args:
         user_input: The question or command from the user.
@@ -94,15 +140,23 @@ def run_crew(user_input: str) -> str:
     """
     
     try:
-        ops_crew = OpsCrew()
-        crew_instance = ops_crew.crew()
+        ops_crew_instance = OpsCrew()
         
-        # Format the tasks with the user's input
+        # Step 1: Run tool discovery if needed
+        if _should_refresh_cache():
+            print("🔍 Discovering and caching MCP tools...")
+            discovery_crew = ops_crew_instance.discovery_crew()
+            discovery_result = discovery_crew.kickoff()
+            print(f"📋 Tool Discovery: {discovery_result}")
+        
+        # Step 2: Run the main ops crew
+        main_crew = ops_crew_instance.ops_crew()
+        
+        # Format the task with the user's input
         task_values = {"user_input": user_input}
-        crew_instance.tasks[0].description = crew_instance.tasks[0].description.format(**task_values)
-        crew_instance.tasks[1].description = crew_instance.tasks[1].description.format(**task_values)
+        main_crew.tasks[0].description = main_crew.tasks[0].description.format(**task_values)
         
-        result = crew_instance.kickoff()
+        result = main_crew.kickoff()
         return str(result)
         
     except Exception as e:
@@ -113,7 +167,7 @@ if __name__ == "__main__":
     if os.getenv("OPENROUTER_API_KEY"):
         print("--- Running Ops Crew Test ---")
         print(f"--- Using Model: {os.getenv('MODEL')} ---")
-        test_input = "Please provide a report on all Kubernetes clusters and also fetch the main content from https://crewai.com"
+        test_input = "Please provide a report on all Kubernetes clusters"
         crew_result = run_crew(test_input)
         print("\n--- Crew Final Result ---")
         print(crew_result)

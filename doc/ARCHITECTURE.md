@@ -37,15 +37,18 @@ Our system consists of a crew of collaborating agents, orchestrated by CrewAI.
   - `tasks.yaml`: Defines task descriptions for K8s analysis and web fetching.
 - **Status**: ✅ **Completed** (Expanded for multiple agents)
 
-### 3.4. Tool Subsystem
-- **`src/tools.py`**:
-  - **Responsibility**: Provides local, mock tools for development.
-  - **Implementation**: Contains the `get_cluster_info()` function with real K8s cluster data.
-  - **Status**: ✅ **Completed**
+### 3.4. Tool Subsystem & Inspector
+
+- **`src/tools.py`** (Local Mock):
+  - **Responsibility**: Provides local, mock tools for development (kept for reference/testing).
+  - **Status**: ✅ Completed
 - **Remote MCP Tools**:
-  - **Responsibility**: Connect to external MCP servers to provide additional capabilities.
-  - **Implementation**: The `crew.py` file uses `MCPServerAdapter` to connect to a remote MCP server for web fetching.
-  - **Status**: ✅ **Completed**
+  - **Responsibility**: Connect to external MCP servers to provide live cluster and infrastructure capabilities.
+  - **Status**: ✅ Completed
+- **Tool Inspector & Cache**:
+  - **Responsibility**: Automatically discover all remote MCP tools on startup and cache them to `tools_cache.json` (24 h TTL). Provides a CLI (`src/tool_inspector.py`) for manual `--refresh / --check / --list` operations.
+  - **Implementation**: Implemented as the `tool_inspector` agent inside `src/ops_crew/crew.py`.
+  - **Status**: ✅ **Completed** (Task 7)
 
 ### 3.5. Memory Subsystem (Planned)
 - **Responsibility**: To provide the crew with short-term, long-term, and entity-based memory, enabling contextual conversations and cross-session learning.
@@ -60,7 +63,7 @@ Our system consists of a crew of collaborating agents, orchestrated by CrewAI.
 2.  **`main.py`**: Captures the input string and passes it to the `OpsCrew`.
 3.  **`ops_crew/crew.py`**:
     - Instantiates the `OpsCrew`.
-    - Initializes the `k8s_expert` agent with the `get_cluster_info` tool.
+    - Initializes the `k8s_expert` agent and, **via the cached tool list**, assigns the `LIST_CLUSTERS` tool to fetch cluster information.
     - Initializes the `web_researcher` agent, connecting to the MCP server to get the `fetch` tool.
     - Creates two tasks (`k8s_analysis_task` and `web_fetch_task`) and assigns them to their respective agents.
 4.  **CrewAI Framework (Sequential Process)**: 

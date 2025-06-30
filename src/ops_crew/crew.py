@@ -13,7 +13,7 @@ load_dotenv()
 
 @CrewBase
 class OpsCrew():
-    """Ops Crew for multi-agent collaboration"""
+    """Platform Agent for multi-agent collaboration"""
 
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
@@ -165,7 +165,7 @@ def run_crew(user_input: str) -> str:
 
 if __name__ == "__main__":
     if os.getenv("OPENROUTER_API_KEY"):
-        print("--- Running Ops Crew Test ---")
+        print("--- Running Platform Agent Test ---")
         print(f"--- Using Model: {os.getenv('MODEL')} ---")
         test_input = "Please provide a report on all Kubernetes clusters"
         crew_result = run_crew(test_input)

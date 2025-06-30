@@ -1,1 +1,1 @@
-# K8s Copilot package 
+# Platform Agent package 

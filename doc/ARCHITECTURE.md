@@ -1,7 +1,18 @@
-# Technical Architecture: Ops Crew
+# Technical Architecture: Platform Agent
+
+## 📋 项目更新状态 (2024年最新)
+
+**🎯 项目重命名**: 从 "Fast Agent" 重命名为 "Platform Agent"，更好地反映平台工程和DevOps基础设施管理的定位。
+
+**📁 文档状态**: 
+- ✅ 已删除过时的伪代码文档 (MVP_PSEUDOCODE.md)
+- ✅ 技术架构已更新为多Agent协作模式
+- ✅ 所有文档统一更新为Platform Agent命名
+
+---
 
 ## 1. Overview
-This document outlines the technical architecture for the Ops Crew, an intelligent, multi-agent system for DevOps tasks. It translates the requirements in the [PRD](./PRD.md) into a concrete implementation plan.
+This document outlines the technical architecture for the Platform Agent, an intelligent, multi-agent system for DevOps tasks. It translates the requirements in the [PRD](./PRD.md) into a concrete implementation plan.
 
 **📋 Current Status**: MVP implementation completed and refactored into a multi-agent system following CrewAI official best practices.
 
@@ -74,7 +85,7 @@ Our system consists of a crew of collaborating agents, orchestrated by CrewAI.
 
 ## 5. Current Project Structure (Implemented)
 ```
-fast-agent/
+platform-agent/
 ├── .venv/                          # Python virtual environment
 ├── crew_memory/                    # (Planned) Persistent storage for CrewAI memory
 ├── doc/                            # Documentation

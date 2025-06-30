@@ -1,4 +1,4 @@
-# This file defines the tasks for our Ops Crew.
+# This file defines the tasks for our Platform Agent.
 # Each task has a description of what it should do and the expected output.
 
 tool_discovery_task:

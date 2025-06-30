@@ -1,7 +1,7 @@
 # Kubernetes MCP 工具集调研
 
 ## 1. 目的
-本文档旨在调研并梳理 `kubernetes-mcp` 项目所提供的全部可用工具（Tools），为 K8s Copilot 的 MVP 开发和未来迭代提供清晰的、有据可依的工具列表。
+本文档旨在调研并梳理 `kubernetes-mcp` 项目所提供的全部可用工具（Tools），为 Platform Agent 的 MVP 开发和未来迭代提供清晰的、有据可依的工具列表。
 
 ## 2. 核心发现
 经过对 `kubernetes-mcp` 项目 `README.md` 的分析，得出一个关键结论：

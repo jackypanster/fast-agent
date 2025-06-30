@@ -1,5 +1,5 @@
 """
-Main entry point for the K8s Copilot application.
+Main entry point for the Platform Agent application.
 """
 import os
 import sys
@@ -14,7 +14,7 @@ def main():
     """
     Main function to run the CLI interface.
     """
-    print("🚀 Welcome to the Ops Crew!")
+    print("🚀 Welcome to the Platform Agent!")
     print("Type 'exit' or 'quit' to end the session.")
     print("==================================================")
     
@@ -27,7 +27,7 @@ def main():
     while True:
         try:
             # Get user input
-            user_input = input("🤖 Ops Crew > ").strip()
+            user_input = input("🤖 Platform Agent > ").strip()
             
             # Check for exit commands
             if user_input.lower() in ['exit', 'quit', 'q']:

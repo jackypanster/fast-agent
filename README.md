@@ -1,8 +1,21 @@
-# K8s Copilot
+# Platform Agent
 
-An interactive AI assistant to manage Kubernetes with natural language, powered by `crewAI` and modern LLMs.
+## 📋 项目状态 (2024年最新)
 
-This project aims to create a "K8s Copilot" that allows developers, testers, and operations engineers to interact with Kubernetes clusters using simple, conversational language. It dramatically lowers the barrier to entry for K8s and improves day-to-day operational efficiency.
+**🎯 项目已从 "Fast Agent" 重命名为 "Platform Agent"**，专注于平台工程和DevOps基础设施管理。
+
+**✅ 当前功能状态**:
+- ✅ **多Agent协作系统**：基于CrewAI框架的智能助手
+- ✅ **工具集成**：支持K8s管理和网络工具
+- ✅ **智能启动脚本**：自动环境检测和依赖管理
+- ✅ **工具缓存系统**：MCP工具自动发现和缓存
+- ✅ **完整验证系统**：环境检查和功能验证
+
+---
+
+An intelligent multi-agent platform for DevOps and infrastructure management, powered by `crewAI` and modern LLMs.
+
+This project aims to create a "Platform Agent" that enables platform engineering teams to interact with complex infrastructure and operational tasks using natural language. It dramatically simplifies platform operations and improves team productivity through AI-driven automation.
 
 ## 📚 Documentation
 

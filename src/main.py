@@ -1,11 +1,22 @@
-"""
-Main entry point for the Platform Agent application.
-"""
+#!/usr/bin/env python
+"""Platform Agent - 智能平台助手主程序"""
+
+import warnings
 import os
 import sys
 from dotenv import load_dotenv
 
 from src.ops_crew.crew import run_crew
+
+# 过滤警告，提升用户体验
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
+warnings.filterwarnings("ignore", category=SyntaxWarning)
+warnings.filterwarnings("ignore", message=".*pydantic.*")
+warnings.filterwarnings("ignore", message=".*invalid escape sequence.*")
+
+# 设置环境变量禁用 pydantic 警告
+os.environ["PYDANTIC_SILENCE_DEPRECATION_WARNINGS"] = "1"
 
 # Load environment variables from .env file
 load_dotenv()

@@ -1,7 +1,8 @@
 #!/bin/bash
 #
 # Platform Agent - 智能平台助手启动脚本
-# 版本: 2.1 - 终极简化版
+# 版本: 2.2 - 跨平台兼容版
+# 支持: macOS, Ubuntu (Python 3.11+)
 #
 
 set -e
@@ -17,7 +18,7 @@ CHECK_ONLY=false
 # 显示帮助信息
 show_help() {
     echo "=========================================="
-    echo "    Platform Agent 启动脚本"
+    echo "    Platform Agent 启动脚本 v2.2"
     echo "=========================================="
     echo
     echo "使用方法:"
@@ -28,7 +29,7 @@ show_help() {
     echo "  ./run.sh --check-only       仅检查环境"
     echo "  ./run.sh --help             显示帮助"
     echo
-    echo "支持: macOS, Ubuntu | Python 3.11.x"
+    echo "支持: macOS, Ubuntu | Python 3.11+"
     echo "=========================================="
 }
 
@@ -39,7 +40,7 @@ parse_args() {
             --force-reinstall) FORCE_REINSTALL=true; shift ;;
             --refresh-tools) REFRESH_TOOLS=true; shift ;;
             --verify) VERIFY=true; shift ;;
-            --check-only) CHECK_ONLY=true; shift ;;
+            --check-only|--only-check) CHECK_ONLY=true; shift ;;
             --help|-h) show_help; exit 0 ;;
             *) break ;;
         esac
@@ -57,35 +58,44 @@ detect_os() {
     fi
 }
 
+# 比较版本号，返回0表示 ver1 >= ver2
+version_ge() {
+    # 使用 sort -V 比较版本号
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+}
+
 # 检查Python
 check_python() {
-    echo "[STEP] 检查 Python 环境..."
+    # 所有提示信息输出到 stderr，真正的 python 路径输出到 stdout 便于调用方捕获
+    echo "[STEP] 检查 Python 环境..." >&2
     
     local python_cmd=""
-    for cmd in python${PYTHON_VERSION} python3.11 python3 python; do
+    # 依次尝试常见 python 命令，优先精确版本，其次系统默认
+    for cmd in python${PYTHON_VERSION} python3 python; do
         if command -v "$cmd" >/dev/null 2>&1; then
             local version=$($cmd --version 2>&1 | grep -oE '[0-9]+\.[0-9]+')
-            if [[ "$version" == "$PYTHON_VERSION" ]]; then
+            if version_ge "$version" "$PYTHON_VERSION"; then
                 python_cmd="$cmd"
-                echo "[SUCCESS] Python $($cmd --version 2>&1): $(command -v $cmd)"
+                echo "[SUCCESS] Python $($cmd --version 2>&1): $(command -v $cmd)" >&2
                 break
             fi
         fi
     done
     
     if [[ -z "$python_cmd" ]]; then
-        echo "[ERROR] 未找到 Python $PYTHON_VERSION.x"
-        echo
-        echo "安装方法:"
+        echo "[ERROR] 未找到符合要求的 Python（>= $PYTHON_VERSION）" >&2
+        # 继续输出指引
+        echo >&2
+        echo "安装方法:" >&2
         if [[ "$(detect_os)" == "ubuntu" ]]; then
-            echo "  sudo apt update"
-            echo "  sudo apt install python$PYTHON_VERSION python$PYTHON_VERSION-venv python$PYTHON_VERSION-pip"
+            echo "  sudo apt update" >&2
+            echo "  sudo apt install python$PYTHON_VERSION python$PYTHON_VERSION-venv python$PYTHON_VERSION-pip" >&2
         else
-            echo "  访问 https://www.python.org/downloads/"
+            echo "  访问 https://www.python.org/downloads/" >&2
         fi
         exit 1
     fi
-    
+    # 最后一行仅输出 python 命令，可被调用方捕获
     echo "$python_cmd"
 }
 
@@ -122,11 +132,11 @@ manage_venv() {
         local venv_python="$VENV_PATH/bin/python"
         if [[ -f "$venv_python" ]]; then
             local version=$($venv_python --version 2>&1 | grep -oE '[0-9]+\.[0-9]+')
-            if [[ "$version" == "$PYTHON_VERSION" ]]; then
+            if version_ge "$version" "$PYTHON_VERSION"; then
                 echo "[SUCCESS] 虚拟环境已存在: Python $($venv_python --version 2>&1)"
                 return 0
             else
-                echo "[WARNING] Python版本不匹配，重新创建..."
+                echo "[WARNING] Python 版本 ($version) 低于最低要求 $PYTHON_VERSION，重新创建..."
                 rm -rf "$VENV_PATH"
             fi
         fi
@@ -231,11 +241,15 @@ run_program() {
     source "$VENV_PATH/bin/activate"
     
     echo
-    echo "Platform Agent - 智能平台助手 v2.1"
+    echo "Platform Agent - 智能平台助手 v2.2"
     echo "========================================="
     echo
     
-    export PYTHONWARNINGS="ignore::pydantic.PydanticDeprecatedSince20"
+    # 忽略特定警告，兼容 macOS 和 Ubuntu
+    export PYTHONWARNINGS="ignore::DeprecationWarning,ignore::PendingDeprecationWarning,ignore::SyntaxWarning"
+    # 禁用 pydantic 的迁移警告
+    export PYDANTIC_SILENCE_DEPRECATION_WARNINGS=1
+    
     $VENV_PATH/bin/python -m src.main "$@"
 }
 
@@ -251,7 +265,7 @@ main() {
     trap cleanup EXIT
     
     echo "========================================="
-    echo "    Platform Agent v2.1 - 启动中..."
+    echo "    Platform Agent v2.2 - 启动中..."
     echo "========================================="
     echo
     

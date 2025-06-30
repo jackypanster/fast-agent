@@ -6,7 +6,7 @@ import os
 import sys
 from dotenv import load_dotenv
 
-from src.ops_crew.crew import run_crew
+from ops_crew.crew import run_crew
 
 # 过滤警告，提升用户体验
 warnings.filterwarnings("ignore", category=DeprecationWarning)

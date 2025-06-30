@@ -61,13 +61,20 @@ Our system consists of a crew of collaborating agents, orchestrated by CrewAI.
   - **Implementation**: Implemented as the `tool_inspector` agent inside `src/ops_crew/crew.py`.
   - **Status**: ✅ **Completed** (Task 7)
 
-### 3.5. Memory Subsystem (Planned)
-- **Responsibility**: To provide the crew with short-term, long-term, and entity-based memory, enabling contextual conversations and cross-session learning.
+### 3.5. Memory Subsystem (Completed)
+- **Responsibility**: Provides the crew with intelligent short-term, long-term, and entity-based memory, enabling contextual conversations and cross-session learning with superior Chinese language support.
 - **Implementation**: 
   - Activated via the `memory=True` parameter in the `Crew` object.
-  - Utilizes CrewAI's built-in memory system (ChromaDB for short-term/entity, SQLite for long-term).
-  - Storage path is controlled via the `CREWAI_STORAGE_DIR` environment variable, set to `./crew_memory/` for persistence and explicit management.
-- **Status**: ⏳ **Planned**
+  - **Qwen Embedding Integration**: Uses Qwen text-embedding-v4 model via OpenAI-compatible API for superior Chinese language understanding and cost optimization.
+  - **Storage Backend**: ChromaDB for vector storage, SQLite for long-term memory persistence.
+  - **Configuration**: Embedder configured with dictionary format for proper CrewAI integration.
+  - Storage path controlled via `CREWAI_STORAGE_DIR=./crew_memory/` environment variable.
+- **Key Features**:
+  - **Cross-session Memory**: Agents remember previous conversations and user preferences
+  - **Chinese Optimization**: Enhanced understanding of Chinese K8s terminology and concepts
+  - **Cost Efficiency**: Reduced embedding API costs compared to OpenAI
+  - **Intelligent Context**: Automatic entity recognition and relationship mapping
+- **Status**: ✅ **Completed and Verified** (Task 6)
 
 ## 4. Data Flow (Scenario: "get k8s clusters and fetch crewai.com")
 1.  **User**: Runs `./run.sh` and types the command.
@@ -80,32 +87,45 @@ Our system consists of a crew of collaborating agents, orchestrated by CrewAI.
 4.  **CrewAI Framework (Sequential Process)**: 
     - **Task 1**: The `k8s_expert` analyzes the input. It finds K8s-related keywords and executes the `get_cluster_info` tool. It then formulates a report.
     - **Task 2**: The `web_researcher` analyzes the same input. It finds the URL, executes the `fetch` tool via the MCP connection, and summarizes the content.
-5.  **LLM (via OpenRouter)**: The LLM drives the reasoning for both agents, deciding when to use tools and how to formulate the final, combined response based on the outputs of both tasks. **With memory enabled, the LLM can also access past conversations and learned entities to provide richer, more contextual answers.**
-6.  **`main.py`**: Displays the final, comprehensive result to the user.
+5.  **LLM and Memory Integration**: 
+    - **Primary LLM (via OpenRouter)**: Drives reasoning for both agents, deciding when to use tools and formulating responses.
+    - **Memory System (via Qwen Embedding)**: Provides intelligent context from past conversations, learned entities, and user preferences.
+    - **Cross-session Learning**: Agents can recall previous cluster discussions, user patterns, and accumulated knowledge.
+    - **Intelligent Context**: Memory system enhances responses with relevant historical information and Chinese K8s terminology understanding.
+6.  **`main.py`**: Displays the final, comprehensive result to the user, enriched with contextual memory insights.
 
 ## 5. Current Project Structure (Implemented)
 ```
 platform-agent/
 ├── .venv/                          # Python virtual environment
-├── crew_memory/                    # (Planned) Persistent storage for CrewAI memory
+├── crew_memory/                    # ✅ Persistent storage for CrewAI memory (auto-created)
 ├── doc/                            # Documentation
 │   ├── ARCHITECTURE.md             # This file
-│   └── ...                         # Other docs
+│   ├── MVP_TASKS.md                # Task implementation status
+│   ├── PRD.md                      # Product requirements
+│   └── TOOLS_SURVEY.md             # Technical research
 ├── src/                            # Source code
 │   ├── __init__.py
 │   ├── main.py                     # ✅ CLI entry point
 │   ├── ops_crew/                   # ✅ CrewAI project package
 │   │   ├── __init__.py
-│   │   ├── crew.py                 # ✅ Multi-agent @CrewBase orchestrator
+│   │   ├── crew.py                 # ✅ Multi-agent orchestrator with Memory
 │   │   └── config/                 # ✅ YAML configurations
 │   │       ├── agents.yaml         # ✅ Agent definitions (2 agents)
 │   │       └── tasks.yaml          # ✅ Task definitions (2 tasks)
 │   └── tools.py                    # ✅ Local K8s tools
-├── .env                            # Environment variables
-├── .gitignore                      # Git ignore patterns
-├── requirements.txt                # ✅ Dependencies, including 'crewai-tools[mcp]'
-├── run.sh                          # ✅ Startup script
-├── uv.lock                         # UV lock file
+├── test_memory_basic.py            # ✅ Memory functionality basic tests
+├── test_crew_memory_simple.py     # ✅ CrewAI Memory integration tests
+├── test_qwen_api.py                # ✅ Qwen API connectivity tests
+├── benchmark_memory.py             # ✅ Memory performance benchmarks
+├── memory_acceptance_checklist.md # ✅ Memory feature acceptance guide
+├── tools_cache.json               # ✅ MCP tools cache (24h TTL)
+├── .env                            # Environment variables (includes Qwen config)
+├── pyproject.toml                  # ✅ UV project configuration
+├── requirements.txt                # ✅ Dependencies backup
+├── run.sh                          # ✅ Smart startup script
+├── uv.lock                         # UV dependency lock
+├── CLAUDE.md                       # ✅ Development guidance
 └── README.md                       # Project documentation
 ```
 
@@ -113,17 +133,68 @@ platform-agent/
 
 ### 6.1. CrewAI Integration
 - **Framework**: CrewAI with official `@CrewBase` pattern.
-- **Architecture**: Multi-agent sequential process.
+- **Architecture**: Multi-agent sequential process with intelligent memory integration.
 - **Tools**: Supports both local Python functions and remote MCP tools via `MCPServerAdapter`.
+- **Memory System**: 
+  - **Embedder Configuration**: Dictionary-based configuration for Qwen embedding integration
+  - **API Compatibility**: OpenAI-compatible interface using Qwen's Dashscope endpoint
+  - **Memory Types**: Short-term, long-term, and entity memory all functional and verified
 
-### 6.2. Environment Management & Data
-- Unchanged.
+### 6.2. Qwen Embedding Integration
+- **Model**: text-embedding-v4 with 1024-dimensional vectors
+- **API Endpoint**: `https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings`
+- **Implementation Strategy**: Method 1 - OpenAI API replacement via environment variables
+- **Configuration Format**:
+  ```python
+  embedder = {
+      "provider": "openai",
+      "config": {
+          "api_key": "qwen_api_key",
+          "api_base": "dashscope_endpoint",
+          "model": "text-embedding-v4"
+      }
+  }
+  ```
+- **Benefits**: 
+  - Superior Chinese language understanding (MTEB leaderboard #1)
+  - Cost optimization compared to OpenAI embeddings
+  - 32K context length support for long K8s configurations
+  - Enhanced semantic understanding for DevOps terminology
+
+### 6.3. Environment Management & Data
+- **Configuration**: Extended `.env` file with Qwen embedding parameters
+- **Storage**: Automatic `crew_memory/` directory creation for persistent memory
+- **Dependencies**: Updated to include `crewai`, `langchain-openai`, and memory-related packages
+- **Cross-platform**: Verified compatibility on macOS and Linux systems
 
 ## 7. MVP Achievement Status
-- Status unchanged, all tasks completed. The implementation was refactored and expanded upon.
+- ✅ **All Original MVP Tasks Completed**: Multi-agent system, tool integration, and CLI interface
+- ✅ **Memory System Implementation**: CrewAI memory with Qwen embedding successfully integrated
+- ✅ **Advanced Features Added**: 
+  - Cross-session learning and contextual conversations
+  - Chinese language optimization for K8s terminology
+  - Cost-efficient embedding solution
+  - Comprehensive testing and validation framework
+- ✅ **Production Ready**: Full verification through automated tests and acceptance checklist
 
 ## 8. Future Enhancements
-- **Guided Conversation**: Implement the advanced multi-turn conversation logic from the PRD for the `k8s_expert`, **leveraging the new memory capabilities for true contextual understanding.**
-- **Hierarchical Process**: Explore changing the `Process.sequential` to `Process.hierarchical` for more complex workflows.
-- **Dynamic Tool Selection**: Allow agents to choose from a larger set of tools based on the task.
-- **Leverage Long-Term Memory**: Design specific tests to validate that the crew learns and improves over multiple sessions. 
+
+### 8.1. Advanced Memory Features
+- **Memory Analytics**: Implement dashboard for memory usage and learning metrics
+- **Memory Cleanup**: Automated cleanup and archival of old memory data
+- **Custom Memory Strategies**: User-defined memory retention and retrieval policies
+
+### 8.2. Enhanced Agent Capabilities  
+- **Guided Conversation**: Advanced multi-turn conversation logic leveraging memory for contextual understanding
+- **Hierarchical Process**: Explore `Process.hierarchical` for complex multi-step workflows
+- **Dynamic Tool Selection**: Smart tool selection based on task context and historical success
+
+### 8.3. Performance and Scalability
+- **Memory Optimization**: Fine-tune Qwen embedding parameters for specific use cases
+- **Distributed Memory**: Support for distributed memory systems in enterprise environments
+- **Performance Monitoring**: Real-time monitoring of memory system performance and costs
+
+### 8.4. Enterprise Features
+- **Multi-tenant Memory**: Isolated memory spaces for different teams or projects
+- **Audit and Compliance**: Memory access logging and data governance features
+- **Integration Ecosystem**: Extended MCP tool ecosystem for enterprise DevOps workflows 

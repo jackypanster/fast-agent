@@ -1,0 +1,41 @@
+{
+  "summary": {
+    "total": 5,
+    "passed": 1,
+    "failed": 4,
+    "warned": 0
+  },
+  "tests": [
+    {
+      "test": "Storage Directory Creation",
+      "status": "FAIL",
+      "timestamp": "2025-06-30T17:31:02.175947",
+      "details": "Popen.__init__() got an unexpected keyword argument 'timeout'"
+    },
+    {
+      "test": "Database Files Existence",
+      "status": "SKIP",
+      "timestamp": "2025-06-30T17:31:02.176011",
+      "details": "Storage directory does not exist"
+    },
+    {
+      "test": "Memory Configuration",
+      "status": "PASS",
+      "timestamp": "2025-06-30T17:31:02.176643",
+      "details": "CREWAI_STORAGE_DIR found in .env"
+    },
+    {
+      "test": "Crew Memory Initialization",
+      "status": "FAIL",
+      "timestamp": "2025-06-30T17:31:02.176669",
+      "details": "Popen.__init__() got an unexpected keyword argument 'timeout'"
+    },
+    {
+      "test": "ChromaDB Dependency",
+      "status": "FAIL",
+      "timestamp": "2025-06-30T17:31:02.176789",
+      "details": "ChromaDB not installed"
+    }
+  ],
+  "timestamp": "2025-06-30T17:31:02.176800"
+}

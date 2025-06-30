@@ -27,6 +27,9 @@ class OpsCrew():
     ]
 
     def __init__(self) -> None:
+        # Configure Qwen embedding as OpenAI replacement for memory functionality
+        os.environ["OPENAI_API_BASE"] = os.getenv("QWEN_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+        
         # Initialize the LLM with OpenRouter configuration
         self.llm = LLM(
             model=os.getenv("MODEL"),
@@ -104,13 +107,38 @@ class OpsCrew():
 
     @crew
     def ops_crew(self) -> Crew:
-        """Creates the main Ops crew for user tasks"""
-        return Crew(
-            agents=[self.k8s_expert()],
-            tasks=[self.k8s_analysis_task()],
-            process=Process.sequential,
-            verbose=True
-        )
+        """Creates the main Ops crew for user tasks with memory enabled using Qwen embeddings"""
+        
+        try:
+            # Configure Qwen embeddings for memory system
+            qwen_embedder_config = {
+                "provider": "openai",
+                "config": {
+                    "api_key": os.getenv("OPENAI_API_KEY"),  # This is actually Qwen's key
+                    "api_base": os.getenv("QWEN_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+                    "model": os.getenv("QWEN_EMBEDDING_MODEL", "text-embedding-v4")
+                }
+            }
+            
+            return Crew(
+                agents=[self.k8s_expert()],
+                tasks=[self.k8s_analysis_task()],
+                process=Process.sequential,
+                verbose=True,
+                memory=True,  # Enable CrewAI memory system
+                embedder=qwen_embedder_config  # Use Qwen embeddings via OpenAI-compatible config
+            )
+            
+        except Exception as e:
+            print(f"⚠️ Warning: Failed to configure Qwen embeddings, falling back to basic memory: {e}")
+            # Fallback to basic memory with default embeddings
+            return Crew(
+                agents=[self.k8s_expert()],
+                tasks=[self.k8s_analysis_task()],
+                process=Process.sequential,
+                verbose=True,
+                memory=True
+            )
 
 
 def _should_refresh_cache() -> bool:

@@ -14,26 +14,29 @@
 
 set -e  # 遇到错误立即退出
 
-# 颜色定义 - 兼容性增强
-if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
-    # 终端支持颜色
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[1;33m'
-    BLUE='\033[0;34m'
-    PURPLE='\033[0;35m'
-    CYAN='\033[0;36m'
-    NC='\033[0m' # No Color
-else
-    # 终端不支持颜色或在非交互模式
-    RED=''
-    GREEN=''
-    YELLOW=''
-    BLUE=''
-    PURPLE=''
-    CYAN=''
-    NC=''
-fi
+# 彩色输出函数 - Ubuntu兼容性增强
+print_color() {
+    local color_code="$1"
+    local message="$2"
+    
+    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
+        # 使用 tput 命令确保兼容性
+        case "$color_code" in
+            "red")    tput setaf 1 ;;
+            "green")  tput setaf 2 ;;
+            "yellow") tput setaf 3 ;;
+            "blue")   tput setaf 4 ;;
+            "purple") tput setaf 5 ;;
+            "cyan")   tput setaf 6 ;;
+        esac
+        echo -n "$message"
+        tput sgr0  # 重置颜色
+        echo
+    else
+        # 不支持颜色时直接输出文本
+        echo "$message"
+    fi
+}
 
 # 全局变量
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,30 +47,30 @@ REFRESH_TOOLS=false
 VERIFY=false
 CHECK_ONLY=false
 
-# 工具函数 - 增强兼容性
+# 工具函数 - Ubuntu兼容性增强
 log_info() {
-    printf "${BLUE}[INFO]${NC} %s\n" "$1"
+    print_color "blue" "[INFO] $1"
 }
 
 log_success() {
-    printf "${GREEN}[SUCCESS]${NC} %s\n" "$1"
+    print_color "green" "[SUCCESS] $1"
 }
 
 log_warning() {
-    printf "${YELLOW}[WARNING]${NC} %s\n" "$1"
+    print_color "yellow" "[WARNING] $1"
 }
 
 log_error() {
-    printf "${RED}[ERROR]${NC} %s\n" "$1"
+    print_color "red" "[ERROR] $1"
 }
 
 log_step() {
-    printf "${PURPLE}[STEP]${NC} %s\n" "$1"
+    print_color "purple" "[STEP] $1"
 }
 
 # 显示帮助信息
 show_help() {
-    printf "${CYAN}🚀 Platform Agent 启动脚本${NC}\n"
+    print_color "cyan" "🚀 Platform Agent 启动脚本"
     echo
     echo "使用方法:"
     echo "  ./run.sh                    正常启动 Platform Agent"
@@ -401,8 +404,8 @@ run_main_program() {
     source "$VENV_PATH/bin/activate"
     
     echo
-    printf "${CYAN}🚀 欢迎使用 Platform Agent - 智能平台助手${NC}\n"
-    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    print_color "cyan" "🚀 欢迎使用 Platform Agent - 智能平台助手"
+    print_color "cyan" "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo
     
     # 设置环境变量以抑制 Pydantic 弃用警告
@@ -416,7 +419,7 @@ run_main_program() {
 cleanup() {
     echo
     log_info "Platform Agent 会话结束"
-    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    print_color "cyan" "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
 # 主函数
@@ -424,16 +427,22 @@ main() {
     # 设置清理函数
     trap cleanup EXIT
     
-    printf "${CYAN}"
+    # ASCII艺术字 - 安全输出
+    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
+        tput setaf 6  # 青色
+    fi
     echo "██████╗ ██╗      █████╗ ████████╗███████╗ ██████╗ ██████╗ ███╗   ███╗     █████╗  ██████╗ ███████╗███╗   ██╗████████╗"
     echo "██╔══██╗██║     ██╔══██╗╚══██╔══╝██╔════╝██╔═══██╗██╔══██╗████╗ ████║    ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝"
     echo "██████╔╝██║     ███████║   ██║   █████╗  ██║   ██║██████╔╝██╔████╔██║    ███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║   "
     echo "██╔═══╝ ██║     ██╔══██║   ██║   ██╔══╝  ██║   ██║██╔══██╗██║╚██╔╝██║    ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║   "
     echo "██║     ███████╗██║  ██║   ██║   ██║     ╚██████╔╝██║  ██║██║ ╚═╝ ██║    ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║   "
     echo "╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝   "
-    printf "${NC}\n"
-    printf "${CYAN}                    🤖 Platform Agent - 智能平台助手 v2.0                        ${NC}\n"
-    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
+        tput sgr0  # 重置颜色
+    fi
+    echo
+    print_color "cyan" "                    🤖 Platform Agent - 智能平台助手 v2.0                        "
+    print_color "cyan" "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo
     
     # 解析命令行参数

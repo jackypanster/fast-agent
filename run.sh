@@ -250,7 +250,7 @@ run_program() {
     # 禁用 pydantic 的迁移警告
     export PYDANTIC_SILENCE_DEPRECATION_WARNINGS=1
     
-    $VENV_PATH/bin/python -m src.main "$@"
+    PYTHONPATH="$SCRIPT_DIR/src:$PYTHONPATH" uv run src/main.py "$@"
 }
 
 # 清理

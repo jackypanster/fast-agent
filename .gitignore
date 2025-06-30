@@ -123,7 +123,16 @@ dmypy.json
 
 # platform-agent project specific
 # ------------------------------------
-# Ignore the mock tools file which contains placeholder data.
-/src/tools.py
-# Ignore temporary test files.
-/test_embedding.py 
+# CrewAI memory storage
+crew_memory/
+
+# Test results and reports
+test/results/
+*.test.json
+*.test.log
+
+# Tool cache files
+tools_cache.json
+
+# Temporary test files
+test_*.tmp.py 

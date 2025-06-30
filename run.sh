@@ -14,14 +14,26 @@
 
 set -e  # 遇到错误立即退出
 
-# 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# 颜色定义 - 兼容性增强
+if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
+    # 终端支持颜色
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    PURPLE='\033[0;35m'
+    CYAN='\033[0;36m'
+    NC='\033[0m' # No Color
+else
+    # 终端不支持颜色或在非交互模式
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    PURPLE=''
+    CYAN=''
+    NC=''
+fi
 
 # 全局变量
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,30 +44,30 @@ REFRESH_TOOLS=false
 VERIFY=false
 CHECK_ONLY=false
 
-# 工具函数
+# 工具函数 - 增强兼容性
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    printf "${BLUE}[INFO]${NC} %s\n" "$1"
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    printf "${GREEN}[SUCCESS]${NC} %s\n" "$1"
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    printf "${YELLOW}[WARNING]${NC} %s\n" "$1"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    printf "${RED}[ERROR]${NC} %s\n" "$1"
 }
 
 log_step() {
-    echo -e "${PURPLE}[STEP]${NC} $1"
+    printf "${PURPLE}[STEP]${NC} %s\n" "$1"
 }
 
 # 显示帮助信息
 show_help() {
-    echo -e "${CYAN}🚀 Platform Agent 启动脚本${NC}"
+    printf "${CYAN}🚀 Platform Agent 启动脚本${NC}\n"
     echo
     echo "使用方法:"
     echo "  ./run.sh                    正常启动 Platform Agent"
@@ -389,8 +401,8 @@ run_main_program() {
     source "$VENV_PATH/bin/activate"
     
     echo
-    echo -e "${CYAN}🚀 欢迎使用 Platform Agent - 智能平台助手${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    printf "${CYAN}🚀 欢迎使用 Platform Agent - 智能平台助手${NC}\n"
+    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
     echo
     
     # 设置环境变量以抑制 Pydantic 弃用警告
@@ -404,7 +416,7 @@ run_main_program() {
 cleanup() {
     echo
     log_info "Platform Agent 会话结束"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 }
 
 # 主函数
@@ -412,16 +424,16 @@ main() {
     # 设置清理函数
     trap cleanup EXIT
     
-    echo -e "${CYAN}"
+    printf "${CYAN}"
     echo "██████╗ ██╗      █████╗ ████████╗███████╗ ██████╗ ██████╗ ███╗   ███╗     █████╗  ██████╗ ███████╗███╗   ██╗████████╗"
     echo "██╔══██╗██║     ██╔══██╗╚══██╔══╝██╔════╝██╔═══██╗██╔══██╗████╗ ████║    ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝"
     echo "██████╔╝██║     ███████║   ██║   █████╗  ██║   ██║██████╔╝██╔████╔██║    ███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║   "
     echo "██╔═══╝ ██║     ██╔══██║   ██║   ██╔══╝  ██║   ██║██╔══██╗██║╚██╔╝██║    ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║   "
     echo "██║     ███████╗██║  ██║   ██║   ██║     ╚██████╔╝██║  ██║██║ ╚═╝ ██║    ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║   "
     echo "╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝   "
-    echo -e "${NC}"
-    echo -e "${CYAN}                    🤖 Platform Agent - 智能平台助手 v2.0                        ${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    printf "${NC}\n"
+    printf "${CYAN}                    🤖 Platform Agent - 智能平台助手 v2.0                        ${NC}\n"
+    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
     echo
     
     # 解析命令行参数

@@ -5,8 +5,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-# from crewai_tools import MCPServerAdapter  # 临时注释，解决导入问题
-from tools import get_cluster_info  # 导入本地工具
+from crewai_tools import MCPServerAdapter
 
 # Load environment variables from .env file
 load_dotenv()
@@ -40,16 +39,34 @@ class OpsCrew():
         )
 
     def _load_cached_tools(self):
-        """Load tools - temporarily using local tools to fix import issues"""
-        # 临时解决方案：返回本地工具
-        return [get_cluster_info]
+        """Load tools from cache and return filtered tool names for k8s operations"""
+        cache_path = pathlib.Path("tools_cache.json")
+        if not cache_path.exists():
+            # Fallback: load all tools if no cache exists
+            return self.get_mcp_tools()
+        
+        try:
+            cache_data = json.loads(cache_path.read_text())
+            # Filter tools for k8s operations (list_, get_, describe_ prefixes)
+            k8s_tool_names = [
+                tool["name"] for tool in cache_data.get("tools", [])
+                if tool["name"].lower().startswith(("list_", "get_", "describe_"))
+            ]
+            if k8s_tool_names:
+                return self.get_mcp_tools(*k8s_tool_names)
+            else:
+                # Fallback if no matching tools found
+                return self.get_mcp_tools()
+        except (json.JSONDecodeError, KeyError):
+            # Fallback on cache corruption
+            return self.get_mcp_tools()
 
     @agent
     def tool_inspector(self) -> Agent:
         return Agent(
             config=self.agents_config['tool_inspector'],
-            # 临时解决方案：使用本地工具
-            tools=[get_cluster_info],
+            # Give it access to all tools so it can catalog them
+            tools=self.get_mcp_tools(),
             llm=self.llm,
             verbose=False
         )

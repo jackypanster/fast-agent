@@ -14,30 +14,6 @@
 
 set -e  # 遇到错误立即退出
 
-# 彩色输出函数 - Ubuntu兼容性增强
-print_color() {
-    local color_code="$1"
-    local message="$2"
-    
-    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
-        # 使用 tput 命令确保兼容性
-        case "$color_code" in
-            "red")    tput setaf 1 ;;
-            "green")  tput setaf 2 ;;
-            "yellow") tput setaf 3 ;;
-            "blue")   tput setaf 4 ;;
-            "purple") tput setaf 5 ;;
-            "cyan")   tput setaf 6 ;;
-        esac
-        echo -n "$message"
-        tput sgr0  # 重置颜色
-        echo
-    else
-        # 不支持颜色时直接输出文本
-        echo "$message"
-    fi
-}
-
 # 全局变量
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PATH="$SCRIPT_DIR/.venv"
@@ -47,30 +23,30 @@ REFRESH_TOOLS=false
 VERIFY=false
 CHECK_ONLY=false
 
-# 工具函数 - Ubuntu兼容性增强
+# 简洁通用日志函数 - 纯文本，跨平台兼容
 log_info() {
-    print_color "blue" "[INFO] $1"
+    echo "[INFO] $1"
 }
 
 log_success() {
-    print_color "green" "[SUCCESS] $1"
+    echo "[SUCCESS] $1"
 }
 
 log_warning() {
-    print_color "yellow" "[WARNING] $1"
+    echo "[WARNING] $1"
 }
 
 log_error() {
-    print_color "red" "[ERROR] $1"
+    echo "[ERROR] $1"
 }
 
 log_step() {
-    print_color "purple" "[STEP] $1"
+    echo "[STEP] $1"
 }
 
 # 显示帮助信息
 show_help() {
-    print_color "cyan" "🚀 Platform Agent 启动脚本"
+    echo "Platform Agent 启动脚本"
     echo
     echo "使用方法:"
     echo "  ./run.sh                    正常启动 Platform Agent"
@@ -404,8 +380,8 @@ run_main_program() {
     source "$VENV_PATH/bin/activate"
     
     echo
-    print_color "cyan" "🚀 欢迎使用 Platform Agent - 智能平台助手"
-    print_color "cyan" "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Platform Agent - 智能平台助手 v2.0"
+    echo "========================================"
     echo
     
     # 设置环境变量以抑制 Pydantic 弃用警告
@@ -419,7 +395,7 @@ run_main_program() {
 cleanup() {
     echo
     log_info "Platform Agent 会话结束"
-    print_color "cyan" "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "========================================"
 }
 
 # 主函数
@@ -427,22 +403,10 @@ main() {
     # 设置清理函数
     trap cleanup EXIT
     
-    # ASCII艺术字 - 安全输出
-    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
-        tput setaf 6  # 青色
-    fi
-    echo "██████╗ ██╗      █████╗ ████████╗███████╗ ██████╗ ██████╗ ███╗   ███╗     █████╗  ██████╗ ███████╗███╗   ██╗████████╗"
-    echo "██╔══██╗██║     ██╔══██╗╚══██╔══╝██╔════╝██╔═══██╗██╔══██╗████╗ ████║    ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝"
-    echo "██████╔╝██║     ███████║   ██║   █████╗  ██║   ██║██████╔╝██╔████╔██║    ███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║   "
-    echo "██╔═══╝ ██║     ██╔══██║   ██║   ██╔══╝  ██║   ██║██╔══██╗██║╚██╔╝██║    ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║   "
-    echo "██║     ███████╗██║  ██║   ██║   ██║     ╚██████╔╝██║  ██║██║ ╚═╝ ██║    ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║   "
-    echo "╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝   "
-    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
-        tput sgr0  # 重置颜色
-    fi
-    echo
-    print_color "cyan" "                    🤖 Platform Agent - 智能平台助手 v2.0                        "
-    print_color "cyan" "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    # 简洁标题
+    echo "========================================"
+    echo "      Platform Agent - 智能平台助手 v2.0"
+    echo "========================================"
     echo
     
     # 解析命令行参数

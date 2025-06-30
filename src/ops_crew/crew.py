@@ -4,9 +4,6 @@ from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import MCPServerAdapter
 
-# Import the K8s tool we created
-from src.tools import get_cluster_info
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -48,7 +45,7 @@ class OpsCrew():
     def web_researcher(self) -> Agent:
         return Agent(
             config=self.agents_config['web_researcher'],
-            tools=self.get_mcp_tools(), # Only MCP tools
+            #tools=self.get_mcp_tools(), # Only MCP tools
             llm=self.llm,
             verbose=True
         )

@@ -35,13 +35,77 @@ class OpsCrew():
             temperature=0.1
         )
 
+    def _load_mcp_tools_required(self):
+        """
+        Loads MCP tools with fail-fast strategy.
+        Raises exception if MCP server is unavailable since the platform agent 
+        requires these tools for core functionality.
+        """
+        tools = []
+        
+        # Check if MCP server is configured
+        if not any(config.get("url") for config in self.mcp_server_params):
+            raise RuntimeError(
+                "❌ MCP服务器未配置！\n"
+                "Platform Agent需要MCP工具来执行K8s操作。\n"
+                "请在.env文件中设置K8S_MCP_URL。\n\n"
+                "解决步骤：\n"
+                "1. 检查.env文件中的K8S_MCP_URL配置\n"
+                "2. 确保MCP服务器正在运行\n"
+                "3. 验证网络连接：curl <MCP_URL>/health\n"
+                "4. 运行 ./run.sh --verify 检查系统状态"
+            )
+        
+        for server_config in self.mcp_server_params:
+            mcp_url = server_config.get("url")
+            if not mcp_url:
+                continue
+                
+            try:
+                # MCPServerAdapter expects serverparams as a dict
+                # For SSE transport, pass the URL in the dict
+                server_params = {
+                    "url": mcp_url,
+                    "transport": server_config.get("transport", "sse")
+                }
+                
+                mcp_adapter = MCPServerAdapter(server_params)
+                server_tools = mcp_adapter.tools
+                tools.extend(server_tools)
+                
+                print(f"✅ 成功加载 {len(server_tools)} 个MCP工具从 {mcp_url}")
+                
+            except Exception as e:
+                raise RuntimeError(
+                    f"❌ 无法连接到MCP服务器: {mcp_url}\n"
+                    f"错误: {str(e)}\n\n"
+                    "可能的解决方案：\n"
+                    "1. 检查MCP服务器是否运行：curl {}/health\n"
+                    "2. 验证URL格式是否正确（需要包含协议 http://或https://）\n"
+                    "3. 检查网络连接和防火墙设置\n"
+                    "4. 查看MCP服务器日志排查问题\n"
+                    "5. 尝试重启MCP服务器\n\n"
+                    "如果问题持续，请检查：\n"
+                    "- MCP服务器版本兼容性\n"
+                    "- 服务器配置文件\n"
+                    "- 系统资源使用情况".format(mcp_url)
+                ) from e
+        
+        if not tools:
+            raise RuntimeError(
+                "❌ 没有可用的MCP工具！\n"
+                "Platform Agent需要MCP工具来执行K8s操作。\n"
+                "请确保MCP服务器正确配置并包含K8s工具。"
+            )
+            
+        return tools
 
     @agent
     def tool_inspector(self) -> Agent:
         return Agent(
             config=self.agents_config['tool_inspector'],
             # Give it access to all tools so it can catalog them
-            tools=self.get_mcp_tools(),
+            tools=self._load_mcp_tools_required(),
             llm=self.llm,
             verbose=False
         )
@@ -51,7 +115,7 @@ class OpsCrew():
         return Agent(
             config=self.agents_config['k8s_expert'],
             # Load all MCP tools directly in real-time
-            tools=self.get_mcp_tools(),
+            tools=self._load_mcp_tools_required(),
             llm=self.llm,
             verbose=True
         )

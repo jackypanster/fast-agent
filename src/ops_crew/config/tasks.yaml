@@ -33,23 +33,28 @@ tool_discovery_task:
 k8s_analysis_task:
   description: >
     **Context:**
-    You have two tools:
-      • `list_clusters` – returns **all** Kubernetes clusters (no parameters required).
-      • `GET_CLUSTER_INFO` – returns detailed info for **one** cluster (requires `cluster` name).
-    When the user asks for an overall cluster list/overview, you must first call `list_clusters`.
+    You have access to dynamically loaded Kubernetes management tools. Use the available tools
+    to analyze and report on the Kubernetes infrastructure based on the user's request.
 
     **Your Task:**
     1.  Analyze the user's request: '{user_input}'.
-    2.  Call `list_clusters` to fetch the list of clusters.
-    3.  For each cluster in the result, extract `metadata.name`, `status.phase`, `spec.version`, `spec.description`, `spec.endpoint`.
-    4.  The table should include the following columns for each cluster:
-        - Cluster Name (from `metadata.name`)
-        - Status (from `status.phase`)
-        - Kubernetes Version (from `spec.version`)
-        - Description (from `spec.description`)
-        - Endpoint (from `spec.endpoint`)
+    2.  Discover and use appropriate tools to gather the requested information:
+        - For cluster overview/listing: Look for tools with names like `list_clusters`, `get_clusters`, or similar
+        - For detailed cluster info: Look for tools like `get_cluster_info`, `describe_cluster`, or similar
+        - For other K8s resources: Use tools with prefixes like `list_`, `get_`, `describe_` as appropriate
+    3.  Based on the available tools and data structure returned:
+        - Extract relevant cluster information (name, status, version, description, endpoint, etc.)
+        - Adapt to the actual data structure returned by the tools
+        - Handle cases where some data fields may not be available
+    4.  Format the results appropriately for the user's request
+
+    **Important Notes:**
+    - Tools are loaded dynamically, so discover what's available and use the most appropriate ones
+    - Adapt to the actual data structure returned by tools (field names may vary)
+    - If cluster listing tools are not available, try alternative approaches
+    - Provide helpful error messages if tools are not accessible
 
   expected_output: >
-    A markdown-formatted report containing a summary table of all Kubernetes clusters.
-    The table must include columns for Cluster Name, Status, Version, Description, and Endpoint.
-    If the tool returns no clusters, state that no clusters were found. 
+    A well-formatted report addressing the user's request. For cluster information requests,
+    provide a markdown table with available cluster details. If no clusters are found or 
+    tools are unavailable, provide clear explanations of the situation. 

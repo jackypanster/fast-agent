@@ -21,7 +21,7 @@ from typing import Dict, List
 # Add src to path for imports
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
-from ops_crew.crew import OpsCrew, _should_refresh_cache
+from ops_crew.crew import OpsCrew
 
 
 def refresh_cache() -> Dict:
@@ -65,7 +65,8 @@ def check_cache_status() -> None:
         tools_count = len(cache_data.get("tools", []))
         
         age = datetime.now() - fetched_at
-        is_stale = _should_refresh_cache()
+        # Check if cache is older than 24 hours
+        is_stale = age.total_seconds() > 24 * 3600
         
         print(f"📋 Cache Status:")
         print(f"   📅 Last updated: {fetched_at.strftime('%Y-%m-%d %H:%M:%S')}")

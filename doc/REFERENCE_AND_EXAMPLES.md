@@ -104,7 +104,7 @@
   - `llm`: 全局的大语言模型实例（LLM）。
 - **关键方法**:
   - `@agent tool_inspector()`: 创建并返回一个 `tool_inspector` Agent 实例，该 Agent 可以访问所有 MCP 工具。
-  - `@agent k8s_expert()`: 创建并返回一个 `k8s_expert` Agent 实例，该 Agent 只能访问从缓存中智能筛选出的 k8s 相关工具。
+  - `@agent k8s_expert()`: 创建并返回一个 `k8s_expert` Agent 实例，该 Agent 通过 `self.get_mcp_tools()` 实时访问所有可用的MCP工具。
   - `@task tool_discovery_task()`: 创建并返回一个用于工具发现的任务。
   - `@task k8s_analysis_task()`: 创建并返回一个用于分析用户 k8s 请求的任务。
   - `@crew discovery_crew()`: 创建并返回一个仅包含 `tool_inspector` Agent 和 `tool_discovery_task` 的 Crew，专门用于工具发现。
@@ -112,50 +112,39 @@
 
 ---
 
-#### `_should_refresh_cache() -> bool`
+#### `get_mcp_tools()` (实时工具加载)
 
 - **功能概述**:
-  一个辅助函数，用于判断 `tools_cache.json` 是否需要刷新。
+  直接从MCP服务器实时获取所有可用工具，无缓存依赖。
 - **输入参数**: 无。
 - **输出结果**:
-  - `bool`: 如果缓存文件不存在、损坏，或距离上次更新时间超过 24 小时，则返回 `True`；否则返回 `False`。
-- **前置条件**: 无。
-
----
-
-#### `_load_cached_tools()`
-
-- **功能概述**:
-  从 `tools_cache.json` 文件中智能加载和筛选工具。
-- **输入参数**: 无。
-- **输出结果**:
-  - `List[Tool]`: 返回一个 `crewai` 工具对象列表。
+  - `List[Tool]`: 返回当前MCP服务器提供的所有工具对象列表。
 - **内部逻辑**:
-  1.  如果缓存文件不存在或损坏，则回退到加载所有可用的 MCP 工具。
-  2.  读取缓存文件，提取所有工具。
-  3.  筛选出名称以下列前缀开头的工具：`list_`, `get_`, `describe_`。
-  4.  如果筛选出工具，则只加载这些工具；否则，回退到加载所有工具。
-- **后置条件**: 返回的工具列表将用于初始化 `k8s_expert` Agent。
+  1.  通过MCPServerAdapter连接MCP服务器。
+  2.  获取所有可用工具的完整列表。
+  3.  直接返回工具列表，无任何筛选或缓存逻辑。
+- **优势**: 确保工具集始终最新，适合企业内网稳定环境。
 
 ---
 
-#### `run_crew(user_input: str) -> str`
+#### `run_crew(user_input: str) -> str` (极简化版本)
 
 - **功能概述**:
-  设置并运行 Ops Crew 以处理用户的请求，是连接 `main.py` 和 `crew.py` 的桥梁。
+  设置并运行 Ops Crew 以处理用户的请求，采用极简化fail-fast设计。
 - **输入参数**:
   - `user_input` (`str`): 用户输入的原始问题或指令。
 - **输出结果**:
   - `str`: Crew 执行后返回的最终结果。
-- **内部逻辑**:
+- **内部逻辑** (极简化):
   1.  实例化 `OpsCrew`。
-  2.  调用 `_should_refresh_cache()` 检查缓存状态。如果需要，则运行 `discovery_crew` 来刷新缓存。
-  3.  获取 `ops_crew`。
-  4.  将 `user_input` 格式化到 `k8s_analysis_task` 的任务描述中。
-  5.  调用 `main_crew.kickoff()` 启动主任务流程。
-  6.  返回执行结果。
-- **异常处理**:
-  - `Exception`: 捕获执行过程中的任何错误，并返回格式化的错误信息。
+  2.  直接获取 `ops_crew`，无缓存检查。
+  3.  将 `user_input` 格式化到 `k8s_analysis_task` 的任务描述中。
+  4.  调用 `main_crew.kickoff()` 启动主任务流程。
+  5.  返回执行结果。
+- **设计特点**:
+  - 移除所有缓存依赖和fallback逻辑
+  - K8s Expert Agent通过 `self.get_mcp_tools()` 实时加载工具
+  - 如果MCP服务器不可用，立即抛出异常，无任何降级处理
 
 ## 2. 使用示例
 

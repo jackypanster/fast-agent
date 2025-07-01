@@ -37,36 +37,37 @@ Platform Agent 是一个基于 `crewai` 框架构建的智能多智能体（Mult
     - 编排了两个工作流：
       - `discovery_crew`: 仅用于执行工具发现任务。
       - `ops_crew`: 用于处理用户的 k8s 相关请求，并启用了基于 Qwen 词向量的记忆功能，以理解长期对话的上下文。
-  - **`_should_refresh_cache()`**: 判断工具缓存是否需要刷新（默认阈值为 24 小时），实现了缓存的自动管理。
-  - **`_load_cached_tools()`**: 智能地从缓存中加载工具。它会筛选出名称以 `list_`, `get_`, `describe_` 开头的工具，专门提供给 `k8s_expert` Agent，确保其操作的专注性和相关性。
-  - **`run_crew()`**: 整个系统的总指挥。它首先根据 `_should_refresh_cache()` 的结果决定是否需要运行 `discovery_crew` 来更新工具，然后启动 `ops_crew` 来执行用户的主要任务。
+  - **`run_crew()`**: 整个系统的核心入口。采用极简化设计，直接启动 `ops_crew` 执行用户任务，K8s Expert Agent 通过 `self.get_mcp_tools()` 实时加载所有可用工具，无任何缓存依赖或fallback逻辑。
 
-## 3. 数据流与工作流程
+## 3. 数据流与工作流程 (极简化架构)
 
 1.  **启动**: 用户在命令行运行 `python src/main.py`。
 2.  **用户输入**: 用户在 `Platform Agent >` 提示符后输入一个请求，例如 "列出所有在 'default' 命名空间下的 Pods"。
 3.  **任务分派**: `main.py` 捕获输入并调用 `run_crew(user_input)`。
-4.  **缓存检查**: `run_crew` 调用 `_should_refresh_cache()` 检查 `tools_cache.json`。
-5.  **工具发现 (如果需要)**:
-    - 如果缓存不存在或已过期，`run_crew` 会启动 `discovery_crew`。
-    - `tool_inspector` Agent 执行 `tool_discovery_task`，通过 `MCPServerAdapter` 扫描 MCP 服务器，并将发现的工具及其元数据写入 `tools_cache.json`。
-6.  **主任务执行**:
-    - `run_crew` 启动 `ops_crew`。
-    - `_load_cached_tools()` 读取 `tools_cache.json`，筛选出 k8s 查询工具，并将其分配给 `k8s_expert` Agent。
-    - `k8s_expert` Agent 接收到 `k8s_analysis_task`（已格式化并包含用户输入），分析用户意图。
-    - Agent 根据意图选择最合适的工具（例如 `list_pods`）并执行它。
+4.  **直接执行**: 
+    - `run_crew` 直接启动 `ops_crew`，无任何缓存检查或工具发现步骤。
+    - `k8s_expert` Agent 通过 `self.get_mcp_tools()` 实时从 MCP 服务器加载所有可用工具。
+    - Agent 接收到 `k8s_analysis_task`（已格式化并包含用户输入），分析用户意图。
+    - Agent 根据意图从实时加载的工具中选择最合适的工具（例如 `list_pods`）并执行。
     - Agent 整合工具返回的结果，并生成一份人类可读的报告。
-7.  **返回结果**: `ops_crew` 将最终报告作为结果返回给 `main.py`。
-8.  **显示输出**: `main.py` 将结果打印在命令行中，完成一次交互。
+5.  **返回结果**: `ops_crew` 将最终报告作为结果返回给 `main.py`。
+6.  **显示输出**: `main.py` 将结果打印在命令行中，完成一次交互。
+
+### 3.1. Fail-Fast 设计原则
+- 如果 MCP 服务器不可用，系统立即抛出异常并中断执行
+- 无任何 fallback 或降级方案，确保问题能够立即暴露
+- 适合企业内网环境，网络稳定性有保障
 
 ## 4. 设计模式与关键技术
 
 - **多智能体系统 (Multi-Agent System)**:
   - 采用 `crewai` 框架，将复杂的任务分解给不同角色的 Agent（`tool_inspector`, `k8s_expert`），实现了关注点分离。
-- **动态工具绑定**:
-  - Agent 的能力不是硬编码的，而是通过 MCP 动态发现并绑定的。这使得系统可以轻松扩展新功能，只需在 MCP 服务器端添加新工具即可。
-- **缓存模式 (Cache Pattern)**:
-  - 通过 `tools_cache.json` 缓存工具定义，避免了每次运行时都进行耗时的工具发现，显著提升了启动速度和性能。
+- **实时工具发现 (Real-time Tool Discovery)**:
+  - Agent 的能力通过 MCP 实时获取，每次执行时直接调用 `self.get_mcp_tools()` 加载所有可用工具。确保工具集始终最新，无缓存延迟。
+- **Fail-Fast 架构模式**:
+  - 移除所有 fallback 逻辑和缓存依赖，如果 MCP 服务器不可用则立即失败。适合企业内网稳定环境，问题能够立即暴露和解决。
+- **Agent 独立性**:
+  - `tool_inspector` 和 `k8s_expert` 完全独立运行，各自直接从 MCP 服务器获取工具，无相互依赖。
 - **记忆与上下文管理**:
   - `ops_crew` 启用了 `memory=True`，并配置了 `qwen_embedder`。这使得 Agent 能够记住之前的对话内容，从而处理更复杂的、有上下文依赖的连续性任务。
 

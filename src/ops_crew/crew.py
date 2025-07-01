@@ -102,10 +102,21 @@ class OpsCrew():
 
     @agent
     def tool_inspector(self) -> Agent:
+        from crewai_tools import FileWriterTool, FileReadTool
+        
+        # Create file operations tools for cache management
+        file_tools = [
+            FileWriterTool(),  # For writing tools_cache.json
+            FileReadTool(),    # For reading existing cache files
+        ]
+        
+        # Combine MCP tools with file operation tools
+        all_tools = self._load_mcp_tools_required() + file_tools
+        
         return Agent(
             config=self.agents_config['tool_inspector'],
-            # Give it access to all tools so it can catalog them
-            tools=self._load_mcp_tools_required(),
+            # Give it access to all tools so it can catalog them AND write cache files
+            tools=all_tools,
             llm=self.llm,
             verbose=False
         )

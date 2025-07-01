@@ -15,8 +15,8 @@
 ### 2.1. 系统集成
 1.  **Agent 框架**: 基于 `crewAI` (https://www.crewai.com/) Python 框架进行开发，并遵循其多 Agent 协作的最佳实践。
 2.  **工具集**:
-    - **本地工具**: 支持加载本地 Python 函数作为工具（如获取 K8s 集群信息的模拟工具）。
-    - **远程 MCP 工具**: 必须能够通过 `MCPServerAdapter` 连接并加载外部 MCP 服务器提供的工具集（如网页抓取、未来要集成的 `k8s mcp server` 等）。
+    - **K8s MCP 工具**: 通过 `MCPServerAdapter` 连接真实的 K8s MCP 服务器，获取完整的集群管理和运维工具集。
+    - **扩展 MCP 工具**: 支持集成多种外部 MCP 服务器提供的工具集（如网页抓取、文档处理等）。
 3.  **LLM 集成**: 集成 Google `gemini-2.5-flash` 大语言模型。模型服务通过 `OpenRouter` (https://openrouter.ai/) 接入，配置信息通过 `.env` 文件管理。
 4.  **记忆系统**: ✅ 已成功实施并验证 CrewAI 的持久化记忆功能，集成Qwen text-embedding-v4实现智能化中文理解。为 Agent 提供了跨会话的学习能力和上下文感知，是高级交互的核心基础。
 
@@ -38,7 +38,7 @@ Platform Agent 的核心是不同领域的专家 Agent 协同工作，共同完�
 2.  **Platform Agent (启动)**: Crew 接收到指令，开始顺序执行任务流。
 3.  **K8s Expert Agent (任务一)**:
     - **分析**: "请求中包含'k8s clusters'，这属于我的职责范围。"
-    - **行动**: 调用 `get_cluster_info` 工具。
+    - **行动**: 调用真实K8s MCP工具（如 `list_clusters`, `GET_CLUSTER_INFO` 等）。
     - **输出**: 生成一份详细的 K8s 集群分析报告，并将其存入记忆。
 4.  **Web Researcher Agent (任务二)**:
     - **分析**: "请求中包含 URL 'https://crewai.com'，这是我的任务。"
